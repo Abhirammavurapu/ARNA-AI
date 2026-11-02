@@ -12,6 +12,8 @@ import statusRoutes from './routes/status.js';
 import chatRoutes from './routes/chat.js';
 import authRoutes from './routes/auth.js';
 
+import liveRoutes from './routes/live.js';
+
 export function createApp() {
   const app = express();
 
@@ -30,7 +32,7 @@ export function createApp() {
   app.use('/api/status', statusRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api/chat', chatRoutes);
-
+app.use('/api/live', liveRoutes);
   app.use(notFound);
   app.use(errorHandler);
 
