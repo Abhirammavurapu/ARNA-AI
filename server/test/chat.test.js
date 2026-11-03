@@ -61,7 +61,7 @@ before(async () => {
   api = http.createServer(createApp());
   await new Promise((r) => api.listen(0, r));
   apiPort = api.address().port;
-  for (const p of ['gemini', 'anthropic', 'openai']) {
+  for (const p of ['gemini', 'groq', 'anthropic', 'openai']) {
     env.ai[p].key = 'test-key';
     env.ai[p].baseUrl = `http://127.0.0.1:${upstreamPort}`;
   }
@@ -122,7 +122,7 @@ async function collect(res) {
     .map((b) => JSON.parse(b.slice(6)));
 }
 
-for (const provider of ['gemini', 'anthropic', 'openai']) {
+for (const provider of ['gemini', 'groq', 'anthropic', 'openai']) {
   test(`${provider}: streams deltas then done`, async () => {
     env.ai.provider = provider;
     const res = await post({ messages: [{ role: 'user', content: 'hi' }], voice: true, name: 'Abhi' });

@@ -25,6 +25,8 @@ GEMINI_API_KEY=your_new_gemini_api_key
 GEMINI_MODEL=gemini-2.5-flash
 ```
 
+For Groq, set `AI_PROVIDER=groq` and `GROQ_API_KEY` instead. When no `AI_PROVIDER` is set, ARNA automatically prefers Groq if a Groq key is configured.
+
 Generate a JWT secret in PowerShell with:
 
 ```powershell

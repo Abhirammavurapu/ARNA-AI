@@ -58,10 +58,8 @@ async function upstreamError(res, label) {
   } else if (res.status === 429) {
     status = 429;
     code = 'AI_RATE_LIMITED';
-    detail = 'ARNA has reached its AI usage limit. Please try again later.';
-  } else if (
-    [500, 502, 503, 504].includes(res.status)
-  ) {
+    detail = `${label} has reached its rate limit. Please try again later.`;
+  } else if ([500, 502, 503, 504].includes(res.status)) {
     status = 503;
     code = 'AI_TEMPORARILY_UNAVAILABLE';
     detail = `${label} is temporarily unavailable. Please try again. ${detail}`;
@@ -248,9 +246,11 @@ async function* anthropic({ system, messages, signal }) {
 
 // ---------------------------------------------------------------- OPENAI ----
 
-async function* openai({ system, messages, signal }) {
-  const cfg = env.ai.openai;
-
+async function* openai(
+  { system, messages, signal },
+  cfg = env.ai.openai,
+  label = 'OpenAI'
+) {
   const apiMessages = [
     { role: 'system', content: system || 'You are ARNA.' },
 
@@ -288,7 +288,7 @@ async function* openai({ system, messages, signal }) {
   });
 
   if (!res.ok) {
-    throw await upstreamError(res, 'OpenAI');
+    throw await upstreamError(res, label);
   }
 
   for await (const data of readSSE(res.body, signal)) {
@@ -477,8 +477,10 @@ async function* ollama({ system, messages, signal }) {
 
 const adapters = {
   gemini,
+  groq: (args) => openai(args, env.ai.groq, 'Groq'),
   anthropic,
   openai,
+  ollama,
 };
 
 function waitForRetry(ms, signal) {
@@ -520,12 +522,15 @@ export async function* streamChat(args) {
     );
   }
 
+  // Use the selected provider directly if it is not Gemini.
   if (provider !== 'gemini') {
     yield* adapter(args);
     return;
   }
 
+  // Retry Gemini before switching to Groq.
   const maxAttempts = 3;
+
   const retryableCodes = new Set([
     'AI_RATE_LIMITED',
     'AI_TEMPORARILY_UNAVAILABLE',
@@ -546,11 +551,34 @@ export async function* streamChat(args) {
         throw err;
       }
 
-      if (
-        !retryableCodes.has(err.code) ||
-        attempt === maxAttempts
-      ) {
+      if (!retryableCodes.has(err.code)) {
         throw err;
+      }
+
+      // Switch to Groq after the final Gemini attempt.
+      if (attempt === maxAttempts) {
+        if (!env.ai.groq?.key) {
+          console.error('[ARNA] Groq API key is missing.');
+          throw err;
+        }
+
+        const hasImages = (args.messages || []).some(
+          (message) => message.images?.length
+        );
+
+        if (hasImages) {
+          console.warn(
+            '[ARNA] Groq fallback skipped because this request contains images.'
+          );
+          throw err;
+        }
+
+        console.warn(
+          '[ARNA] Gemini failed after 3 attempts. Switching to Groq.'
+        );
+
+        yield* openai(args, env.ai.groq, 'Groq');
+        return;
       }
 
       const delay = attempt * 2000;

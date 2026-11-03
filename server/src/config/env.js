@@ -1,3 +1,4 @@
+
 import dotenv from 'dotenv';
 
 dotenv.config({ quiet: true });
@@ -13,8 +14,13 @@ const str = (name, fallback = '') => (process.env[name] || fallback).trim();
 const ai = {
   gemini: {
     key: str('GEMINI_API_KEY') || str('GOOGLE_API_KEY'),
-    model: str('GEMINI_MODEL', 'gemini-2.5-flash'),
+    model: str('GEMINI_MODEL', 'gemini-3.8-flash'),
     baseUrl: str('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com').replace(/\/$/, ''),
+  },
+  groq: {
+    key: str('GROQ_API_KEY'),
+    model: str('GROQ_MODEL', 'openai/gpt-oss-20b'),
+    baseUrl: str('GROQ_BASE_URL', 'https://api.groq.com/openai').replace(/\/$/, ''),
   },
   anthropic: {
     key: str('ANTHROPIC_API_KEY'),
@@ -28,11 +34,10 @@ const ai = {
   },
 };
 
-/** Explicit AI_PROVIDER wins; otherwise the first provider that has a key. */
 function resolveProvider() {
   const wanted = str('AI_PROVIDER').toLowerCase();
   if (wanted && ai[wanted]) return wanted;
-  return ['gemini', 'anthropic', 'openai'].find((p) => ai[p].key) || wanted || 'gemini';
+  return ['groq', 'gemini', 'anthropic', 'openai'].find((p) => ai[p].key) || wanted || 'gemini';
 }
 
 const env = {
@@ -48,12 +53,11 @@ export function aiConfigured() {
   return Boolean(env.ai[env.ai.provider]?.key);
 }
 
-/** Returns human-readable configuration problems (never throws). */
 export function validateEnv() {
   const problems = [];
   if (!aiConfigured()) {
     problems.push(
-      `No API key for AI provider "${env.ai.provider}". Set GEMINI_API_KEY (free tier available), ANTHROPIC_API_KEY or OPENAI_API_KEY.`
+      `No API key for AI provider "${env.ai.provider}". Set GEMINI_API_KEY or GROQ_API_KEY.`
     );
   }
   return problems;
