@@ -175,7 +175,46 @@ body {
   border-radius: 50%;
   box-shadow: inset 6px 8px 18px rgba(255,255,255,.08), 0 0 20px rgba(255,255,255,.08);
 }
+.css-orb__satellite {
+  position: absolute;
+  z-index: 1;
+  width: 76%;
+  height: 38%;
+  border: 1px solid rgba(165, 243, 252, 0.34);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: satellite-orbit 8s linear infinite;
+}
+.css-orb__satellite::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -5px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #cffafe;
+  box-shadow: 0 0 8px #67e8f9, 0 0 18px rgba(34, 211, 238, .85);
+}
+.css-orb__satellite--one {
+  transform: rotateX(66deg) rotateZ(-24deg);
+}
+.css-orb__satellite--two {
+  width: 88%;
+  height: 44%;
+  border-color: rgba(232, 121, 249, .3);
+  transform: rotateY(62deg) rotateZ(38deg);
+  animation-duration: 11s;
+  animation-direction: reverse;
+}
+.css-orb__satellite--two::after {
+  width: 7px;
+  height: 7px;
+  background: #f5d0fe;
+  box-shadow: 0 0 8px #e879f9, 0 0 17px rgba(232, 121, 249, .8);
+}
 .css-orb__ring {
+  z-index: 2;
   width: 76%;
   height: 76%;
   border: 1.5px solid rgba(165, 180, 252, 0.4);
@@ -219,8 +258,11 @@ body {
   0%, 100% { opacity: 0.28; scale: 0.94; }
   50% { opacity: 0.85; scale: 1.05; }
 }
+@keyframes satellite-orbit {
+  to { rotate: 360deg; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .css-orb__glow, .css-orb__core, .css-orb__ring, .css-orb__ring::before, .css-orb__ring::after { animation: none !important; }
+  .css-orb__glow, .css-orb__core, .css-orb__ring, .css-orb__ring::before, .css-orb__ring::after, .css-orb__satellite { animation: none !important; }
 }
 
 /* ---------------------------------------------------------------- Markdown */

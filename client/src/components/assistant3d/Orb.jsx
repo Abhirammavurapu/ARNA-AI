@@ -50,6 +50,8 @@ export default function Orb({ state = 'idle', className = '' }) {
     <div ref={wrapRef} className={`orb-wrap ${className}`} data-state={state}>
       <div className={`css-orb ${ready && mode === 'webgl' ? 'css-orb--hidden' : ''}`} aria-hidden="true">
         <span className="css-orb__glow" />
+        <span className="css-orb__satellite css-orb__satellite--one" />
+        <span className="css-orb__satellite css-orb__satellite--two" />
         <span className="css-orb__core" />
         <span className="css-orb__ring" />
       </div>

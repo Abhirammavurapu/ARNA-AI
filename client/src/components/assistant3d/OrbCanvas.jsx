@@ -86,6 +86,9 @@ function Scene({ stateRef, quality, isTouch, onSlow }) {
   const ring1 = useRef();
   const ring2 = useRef();
   const ring3 = useRef();
+  const orbit1 = useRef();
+  const orbit2 = useRef();
+  const orbit3 = useRef();
   const points = useRef();
   const clock = useRef({ t: 0, frames: 0, acc: 0, warm: 0 });
   const look = useRef({ speed: 0.35, amp: 0.1, spin: 0.15, a: new THREE.Color(LOOKS.idle.a), b: new THREE.Color(LOOKS.idle.b) });
@@ -162,6 +165,9 @@ function Scene({ stateRef, quality, isTouch, onSlow }) {
     ring1.current.rotation.z += dt * cur.spin * 0.9;
     ring2.current.rotation.x -= dt * cur.spin * 0.7;
     ring3.current.rotation.y += dt * cur.spin * 0.45;
+    orbit1.current.rotation.z += dt * (0.18 + cur.spin * 0.3);
+    orbit2.current.rotation.x -= dt * (0.12 + cur.spin * 0.22);
+    orbit3.current.rotation.y += dt * (0.1 + cur.spin * 0.18);
     points.current.rotation.y += dt * (0.05 + cur.spin * 0.12);
 
     const tl = tilt.current;
@@ -213,6 +219,32 @@ function Scene({ stateRef, quality, isTouch, onSlow }) {
         <torusGeometry args={[1.86, 0.004, 5, 120]} />
         <meshBasicMaterial color="#f0abfc" transparent opacity={0.3} />
       </mesh>
+      <group ref={orbit1} rotation={[1.1, 0.15, 0]}>
+        <mesh position={[1.52, 0, 0]}>
+          <sphereGeometry args={[0.075, 12, 8]} />
+          <meshBasicMaterial color="#a5f3fc" toneMapped={false} />
+        </mesh>
+        <mesh position={[1.52, 0, 0]} scale={2.2}>
+          <sphereGeometry args={[0.075, 12, 8]} />
+          <meshBasicMaterial color="#22d3ee" transparent opacity={0.18} depthWrite={false} blending={THREE.AdditiveBlending} />
+        </mesh>
+      </group>
+      <group ref={orbit2} rotation={[0.35, 1.05, 0.65]}>
+        <mesh position={[1.72, 0, 0]}>
+          <sphereGeometry args={[0.055, 12, 8]} />
+          <meshBasicMaterial color="#f5d0fe" toneMapped={false} />
+        </mesh>
+        <mesh position={[1.72, 0, 0]} scale={2.5}>
+          <sphereGeometry args={[0.055, 12, 8]} />
+          <meshBasicMaterial color="#e879f9" transparent opacity={0.16} depthWrite={false} blending={THREE.AdditiveBlending} />
+        </mesh>
+      </group>
+      <group ref={orbit3} rotation={[1.65, 0.35, 1.2]}>
+        <mesh position={[1.88, 0, 0]}>
+          <sphereGeometry args={[0.04, 10, 8]} />
+          <meshBasicMaterial color="#fde68a" toneMapped={false} />
+        </mesh>
+      </group>
       <points ref={points} geometry={particleGeo}>
         <pointsMaterial size={0.022} color="#c4b5fd" transparent opacity={0.8} depthWrite={false} blending={THREE.AdditiveBlending} sizeAttenuation />
       </points>
