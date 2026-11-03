@@ -139,8 +139,8 @@ export default function App() {
         onToggleTheme={() => update({ theme: settings.theme === 'dark' ? 'light' : 'dark' })}
       />
 
-      <main className="relative flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-2 px-3 pb-1 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-4">
+      <main className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="z-10 flex shrink-0 items-center gap-2 border-b border-line/60 bg-bg/70 px-3 pb-1 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-4 md:bg-transparent">
           <button onClick={() => setSidebarOpen((o) => !o)} aria-label="Toggle menu" className="grid h-10 w-10 place-items-center rounded-full hover:bg-surface2">
             <Menu size={22} />
           </button>
@@ -171,7 +171,7 @@ export default function App() {
         )}
         {tts.error && <Banner>{tts.error}</Banner>}
 
-        <div ref={scrollRef} onScroll={onScroll} className="scroll-y min-h-0 flex-1">
+        <div ref={scrollRef} onScroll={onScroll} className="scroll-y min-h-0 flex-1 overscroll-y-contain">
           {chat.active ? (
             <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-4 sm:px-6">
               {messages.map((m) => (
@@ -192,6 +192,7 @@ export default function App() {
           )}
         </div>
 
+        <div className="z-10 shrink-0 bg-gradient-to-t from-bg via-bg/95 to-transparent">
         <Composer
           busy={chat.busy}
           lang={settings.lang}
@@ -201,6 +202,7 @@ export default function App() {
           onOpenLive={() => setLiveOpen(true)}
           liveDisabled={!tts.supported}
         />
+        </div>
       </main>
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} tts={tts} chatCount={chat.chats.length} onClearAll={chat.clearAll} />

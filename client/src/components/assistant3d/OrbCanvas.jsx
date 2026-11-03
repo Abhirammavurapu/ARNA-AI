@@ -85,6 +85,7 @@ function Scene({ stateRef, quality, isTouch, onSlow }) {
   const halo = useRef();
   const ring1 = useRef();
   const ring2 = useRef();
+  const ring3 = useRef();
   const points = useRef();
   const clock = useRef({ t: 0, frames: 0, acc: 0, warm: 0 });
   const look = useRef({ speed: 0.35, amp: 0.1, spin: 0.15, a: new THREE.Color(LOOKS.idle.a), b: new THREE.Color(LOOKS.idle.b) });
@@ -160,6 +161,7 @@ function Scene({ stateRef, quality, isTouch, onSlow }) {
     orb.current.rotation.y += dt * cur.spin * 0.6;
     ring1.current.rotation.z += dt * cur.spin * 0.9;
     ring2.current.rotation.x -= dt * cur.spin * 0.7;
+    ring3.current.rotation.y += dt * cur.spin * 0.45;
     points.current.rotation.y += dt * (0.05 + cur.spin * 0.12);
 
     const tl = tilt.current;
@@ -200,12 +202,16 @@ function Scene({ stateRef, quality, isTouch, onSlow }) {
         />
       </mesh>
       <mesh ref={ring1} rotation={[1.2, 0, 0]}>
-        <torusGeometry args={[1.45, 0.006, 6, 120]} />
-        <meshBasicMaterial color="#a5b4fc" transparent opacity={0.45} />
+        <torusGeometry args={[1.45, 0.008, 6, 120]} />
+        <meshBasicMaterial color="#c4b5fd" transparent opacity={0.6} />
       </mesh>
       <mesh ref={ring2} rotation={[0.3, 0.9, 0]}>
-        <torusGeometry args={[1.7, 0.005, 6, 120]} />
-        <meshBasicMaterial color="#67e8f9" transparent opacity={0.35} />
+        <torusGeometry args={[1.7, 0.007, 6, 120]} />
+        <meshBasicMaterial color="#67e8f9" transparent opacity={0.48} />
+      </mesh>
+      <mesh ref={ring3} rotation={[0.7, 0.2, 1.1]}>
+        <torusGeometry args={[1.86, 0.004, 5, 120]} />
+        <meshBasicMaterial color="#f0abfc" transparent opacity={0.3} />
       </mesh>
       <points ref={points} geometry={particleGeo}>
         <pointsMaterial size={0.022} color="#c4b5fd" transparent opacity={0.8} depthWrite={false} blending={THREE.AdditiveBlending} sizeAttenuation />

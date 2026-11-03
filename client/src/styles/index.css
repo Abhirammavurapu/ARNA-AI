@@ -61,6 +61,8 @@ body {
 .app-shell {
   height: 100vh;
   height: 100dvh;
+  min-height: 0;
+  min-width: 0;
   background:
     radial-gradient(60rem 36rem at 80% -10%, var(--glow-1), transparent 60%),
     radial-gradient(48rem 30rem at -10% 110%, var(--glow-2), transparent 60%),
@@ -93,6 +95,7 @@ body {
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   scrollbar-width: thin;
   scrollbar-color: var(--surface-2) transparent;
 }
@@ -141,12 +144,36 @@ body {
   will-change: transform, opacity;
 }
 .css-orb__core {
+  position: relative;
   width: 56%;
   height: 56%;
-  background: radial-gradient(circle at 32% 28%, #e0f7ff, #22d3ee 28%, #7c5cff 62%, #f472b6 100%);
-  box-shadow: 0 0 60px rgba(124, 92, 255, 0.55), inset 0 0 40px rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 34% 24%, rgba(255,255,255,.92) 0 2%, rgba(210,250,255,.65) 5%, transparent 20%),
+    radial-gradient(circle at 32% 28%, #e0f7ff, #22d3ee 28%, #7c5cff 62%, #f472b6 100%);
+  box-shadow: 0 0 22px rgba(34, 211, 238, 0.45), 0 0 72px rgba(124, 92, 255, 0.52), inset -16px -18px 34px rgba(21, 17, 74, 0.42), inset 10px 10px 24px rgba(255, 255, 255, 0.28);
   animation: orb-float 5s ease-in-out infinite;
   will-change: transform;
+}
+.css-orb__core::before,
+.css-orb__core::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+.css-orb__core::before {
+  inset: 8% 12% auto;
+  height: 28%;
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,0));
+  filter: blur(7px);
+  transform: rotate(-28deg);
+}
+.css-orb__core::after {
+  inset: 14%;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 50%;
+  box-shadow: inset 6px 8px 18px rgba(255,255,255,.08), 0 0 20px rgba(255,255,255,.08);
 }
 .css-orb__ring {
   width: 76%;
@@ -293,6 +320,14 @@ html[data-theme="light"] .md a { color: #4f46e5; }
 
 textarea { font-family: inherit; }
 input[type="range"] { accent-color: #8b5cf6; }
+
+@media (max-width: 767px) {
+  .app-shell > main {
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
