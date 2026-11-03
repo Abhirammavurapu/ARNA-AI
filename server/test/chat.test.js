@@ -347,6 +347,15 @@ test('status endpoint reports configuration, /api/health is gone', async () => {
   assert.equal(s.service, 'ARNA API');
 });
 
+test('backend root explains that this is an API and links status', async () => {
+  const res = await fetch(`http://127.0.0.1:${apiPort}/`);
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.service, 'ARNA API');
+  assert.match(body.message, /backend/);
+  assert.equal(body.statusUrl, '/api/status');
+});
+
 test('disallowed origin gets 403', async () => {
   const res = await fetch(`http://127.0.0.1:${apiPort}/api/status`, { headers: { Origin: 'http://evil.example' } });
   assert.equal(res.status, 403);

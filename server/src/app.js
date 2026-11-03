@@ -31,6 +31,16 @@ export function createApp() {
   app.use('/api/tts', ttsRoutes);
   app.use(morgan(env.isProd ? 'combined' : 'dev'));
 
+  app.get('/', (req, res) => {
+    res.json({
+      success: true,
+      service: `${env.appName} API`,
+      message: 'This is the ARNA backend. Open the ARNA client to use the app.',
+      frontendUrl: env.clientOrigins.find((origin) => !/localhost|127\.0\.0\.1/.test(origin)) || null,
+      statusUrl: '/api/status',
+    });
+  });
+
   app.use('/api', globalLimiter);
   app.use('/api/status', statusRoutes);
   app.use('/api/auth', authRoutes);
