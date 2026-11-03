@@ -23,6 +23,11 @@ const audioSupported = typeof Audio !== 'undefined';
 
 // Detect the language of the actual response.
 function detectSpeechLanguage(text = '') {
+  // Hindi script
+  if (/[\u0900-\u097F]/.test(text)) {
+    return 'hi-IN';
+  }
+
   // Telugu script
   if (/[\u0C00-\u0C7F]/.test(text)) {
     return 'te-IN';
@@ -186,7 +191,7 @@ export function useTTS({
     };
 
     let fallbackStarted = false;
-    const playTeluguFallback = () => {
+    const playNeuralFallback = () => {
       if (fallbackStarted || finished) return;
       fallbackStarted = true;
 
@@ -194,20 +199,20 @@ export function useTTS({
       audioRequest.current = controller;
       clearTimeout(watchdog.current);
       watchdog.current = setTimeout(() => {
-        setError('Telugu voice generation timed out. Please try again.');
+        setError('Neural voice generation timed out. Please try again.');
         next();
       }, 60000);
 
       fetch(`${API_BASE}/api/tts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, gender: 'female' }),
+        body: JSON.stringify({ text, gender: 'female', lang: language }),
         signal: controller.signal,
       })
         .then(async (response) => {
           if (!response.ok) {
             const result = await response.json().catch(() => ({}));
-            throw new Error(result.message || 'Telugu voice generation failed.');
+            throw new Error(result.message || 'Neural voice generation failed.');
           }
           return response.blob();
         })
@@ -237,20 +242,20 @@ export function useTTS({
           audioElement.current = audio;
           audio.onended = next;
           audio.onerror = () => {
-            setError('Could not play Telugu audio. Check your device volume and try again.');
+            setError('Could not play the neural voice audio. Check your device volume and try again.');
             next();
           };
           return audio.play();
         })
         .catch((playbackError) => {
           if (playbackError.name === 'AbortError' || gen !== generation.current) return;
-          setError(playbackError.message || 'Could not play the Telugu voice reply.');
+          setError(playbackError.message || 'Could not play the neural voice reply.');
           next();
         });
     };
 
-    if (language === 'te-IN' && !selectedVoice && audioSupported) {
-      playTeluguFallback();
+    if (['te-IN', 'hi-IN'].includes(language) && !selectedVoice && audioSupported) {
+      playNeuralFallback();
       return;
     }
 
@@ -278,9 +283,9 @@ export function useTTS({
     utterance.volume = 1;
     utterance.onend = next;
     utterance.onerror = () => {
-      if (language === 'te-IN' && audioSupported) {
+      if (['te-IN', 'hi-IN'].includes(language) && audioSupported) {
         synth.cancel();
-        playTeluguFallback();
+        playNeuralFallback();
         return;
       }
       setError('Speech playback failed. Check your device audio settings.');
@@ -290,9 +295,9 @@ export function useTTS({
     clearTimeout(watchdog.current);
     watchdog.current = setTimeout(
       () => {
-        if (language === 'te-IN' && audioSupported) {
+        if (['te-IN', 'hi-IN'].includes(language) && audioSupported) {
           synth.cancel();
-          playTeluguFallback();
+          playNeuralFallback();
           return;
         }
         next();

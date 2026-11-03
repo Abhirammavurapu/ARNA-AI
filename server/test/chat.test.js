@@ -103,6 +103,19 @@ test('detects Telugu script and common Roman Telugu while preserving English', (
   }
 });
 
+test('detects Hindi script and common Roman Hindi', () => {
+  for (const message of [
+    'मुझे हिंदी में जवाब दो',
+    'आप कैसे हैं?',
+    'Mujhe Hindi mein jawab do',
+    'Kripya meri madad kijiye',
+  ]) {
+    assert.equal(detectLanguageStyle(message), 'HINDI', message);
+  }
+
+  assert.equal(detectLanguageStyle('Can you translate Hindi?'), 'ENGLISH');
+});
+
 test('system prompt explicitly requires the detected reply language', () => {
   assert.match(
     buildSystemPrompt({ latestMessage: 'Naku coding nerpinchu' }),
@@ -158,6 +171,34 @@ test('auto voice replies follow the recognized transcript language', () => {
     }),
     /REQUIRED RESPONSE LANGUAGE: English/
   );
+  assert.match(
+    buildSystemPrompt({
+      voice: true,
+      lang: 'auto',
+      latestMessage: 'मुझे हिंदी में जवाब दो',
+    }),
+    /REQUIRED RESPONSE LANGUAGE: Hindi/
+  );
+});
+
+test('Hindi recognition setting forces Hindi replies', () => {
+  assert.match(
+    buildSystemPrompt({
+      voice: true,
+      lang: 'hi-IN',
+      latestMessage: 'Please help me.',
+    }),
+    /REQUIRED RESPONSE LANGUAGE: Hindi/
+  );
+});
+
+test('speech endpoint rejects unsupported neural speech languages', async () => {
+  const res = await fetch(`http://127.0.0.1:${apiPort}/api/tts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: 'Hello', lang: 'en-IN' }),
+  });
+  assert.equal(res.status, 400);
 });
 
 async function collect(res) {

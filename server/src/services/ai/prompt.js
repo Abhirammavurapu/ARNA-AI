@@ -5,10 +5,28 @@ export function detectLanguageStyle(text = '') {
   if (/[\u0C00-\u0C7F]/.test(message)) {
     return 'TELUGU';
   }
+  if (/[\u0900-\u097F]/.test(message)) {
+    return 'HINDI';
+  }
 
   const words = message.toLowerCase().match(/[a-z]+/g) || [];
   if (words.length === 0) {
     return 'ENGLISH';
+  }
+
+  const hindiWords = new Set([
+    'aap', 'aapko', 'achha', 'acha', 'batao', 'bataiye',
+    'chahiye', 'dhanyavaad', 'dijiye', 'kaise', 'kaisa',
+    'kaisi', 'kahan', 'kab', 'karna', 'karo', 'kijiye',
+    'kripya', 'kya', 'kyun', 'madad', 'mein', 'mujhe',
+    'mujhko', 'nahi', 'nahin', 'samjhao', 'sikhao',
+    'suno', 'theek', 'tum', 'tumhe', 'tumko', 'unka',
+    'unko', 'vo', 'woh', 'yaar', 'yeh', 'mera', 'meri',
+    'mere', 'hum', 'hume', 'hain', 'hai', 'hoon', 'hu',
+    'bhasha', 'jawab', 'likho', 'boliye', 'bolo', 'seekhna',
+  ]);
+  if (words.some((word) => hindiWords.has(word))) {
+    return 'HINDI';
   }
 
   const teluguWords = new Set([
@@ -65,7 +83,13 @@ export function buildSystemPrompt({
     : '';
   let language = detectLanguageStyle(currentMessage);
   if (voiceLanguage === 'te') language = 'TELUGU';
+  if (voiceLanguage === 'hi') language = 'HINDI';
   if (voiceLanguage === 'en') language = 'ENGLISH';
+  const languageName = {
+    ENGLISH: 'English',
+    HINDI: 'Hindi',
+    TELUGU: 'Telugu',
+  }[language] || 'English';
 
   const parts = [
     `You are ARNA, a friendly, intelligent and helpful AI assistant.`,
@@ -73,24 +97,28 @@ export function buildSystemPrompt({
     `STRICT LANGUAGE RULES:
 
     The detected language of the latest user message is: ${language}.
-    REQUIRED RESPONSE LANGUAGE: ${language === 'TELUGU' ? 'Telugu' : 'English'}.
+    REQUIRED RESPONSE LANGUAGE: ${languageName}.
     Follow this requirement for the entire response, regardless of earlier conversation.
 
     RULE 1 - ENGLISH:
     If the latest user message is English, reply only in English.
 
-    RULE 2 - TELUGU SCRIPT:
+    RULE 2 - HINDI:
+    If the latest user message is Hindi, reply in natural Hindi using Devanagari script.
+
+    RULE 3 - TELUGU SCRIPT:
     If the latest user message is Telugu, reply in natural Telugu script.
 
-    RULE 3 - TELUGU USING ENGLISH LETTERS:
+    RULE 4 - TELUGU USING ENGLISH LETTERS:
     If the user writes Telugu using English letters (Roman Telugu),
     understand it as Telugu and reply in Telugu script, not English or Roman Telugu.
 
-    RULE 4 - MIXED LANGUAGE:
-    If the user mixes Telugu and English, reply primarily in Telugu script.
+    RULE 5 - MIXED LANGUAGE:
+    If the user mixes Hindi or Telugu with English, reply primarily in the detected Indian language's script.
     Keep technical terms such as Java, Python, React, SQL, HTML and CSS in English.
 
     STRICT RESTRICTIONS:
+    - Never write Hindi sentences using English letters; use Devanagari.
     - Never reply in Tenglish or Roman Telugu.
     - Never write Telugu sentences using English letters.
     - Never translate a Telugu question into an English answer.
@@ -112,6 +140,12 @@ export function buildSystemPrompt({
 
     User: What is React?
     Assistant: React is a JavaScript library used to build user interfaces.
+
+    User: मुझे हिंदी में जवाब दो।
+    Assistant: ज़रूर, मैं हिंदी में जवाब दूँगा।
+
+    User: Mujhe Hindi mein jawab do.
+    Assistant: ज़रूर, मैं हिंदी में जवाब दूँगा।
 
     User: నాకు Python నేర్పించు.
     Assistant: తప్పకుండా! నేను మీకు Python ను దశలవారీగా నేర్పిస్తాను.
@@ -173,7 +207,9 @@ export function buildSystemPrompt({
       `Write the response as natural language ARNA can read aloud.
       Keep voice responses clear and concise.
       Speak in the detected language.
+      For Hindi, generate natural Hindi sentences in Devanagari script.
       For Telugu, generate natural Telugu sentences in Telugu script.
+      Do not generate Roman Hindi for speech.
       Do not generate Roman Telugu for speech.`
     );
   }

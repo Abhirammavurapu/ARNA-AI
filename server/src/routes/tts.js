@@ -8,10 +8,14 @@ const TELUGU_VOICES = {
   female: 'te-IN-ShrutiNeural',
   male: 'te-IN-MohanNeural'
 };
+const HINDI_VOICES = {
+  female: 'hi-IN-SwaraNeural',
+  male: 'hi-IN-MadhurNeural'
+};
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function generateAudio(text, voice) {
+async function generateAudio(text, voice, lang) {
   const maxAttempts = 3;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -20,7 +24,7 @@ async function generateAudio(text, voice) {
 
       const tts = new EdgeTTS({
         voice,
-        lang: 'te-IN',
+        lang,
         timeout: 45000
       });
 
@@ -70,7 +74,7 @@ async function generateAudio(text, voice) {
 
 router.post('/', async (req, res) => {
   try {
-    const { text, gender = 'female' } = req.body || {};
+    const { text, gender = 'female', lang = 'te-IN' } = req.body || {};
 
     if (typeof text !== 'string' || !text.trim()) {
       return res.status(400).json({
@@ -86,13 +90,19 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const voice = gender === 'male'
-      ? TELUGU_VOICES.male
-      : TELUGU_VOICES.female;
+    if (!['te-IN', 'hi-IN'].includes(lang)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unsupported speech language.'
+      });
+    }
+
+    const voices = lang === 'hi-IN' ? HINDI_VOICES : TELUGU_VOICES;
+    const voice = gender === 'male' ? voices.male : voices.female;
 
     console.log('[ARNA TTS] Starting:', voice);
 
-    const audioBuffer = await generateAudio(text.trim(), voice);
+    const audioBuffer = await generateAudio(text.trim(), voice, lang);
 
     if (res.destroyed) return;
 
@@ -110,7 +120,7 @@ router.post('/', async (req, res) => {
     if (!res.headersSent && !res.destroyed) {
       return res.status(503).json({
         success: false,
-        message: 'Telugu audio service is temporarily unavailable. Please try again.',
+        message: 'Neural speech service is temporarily unavailable. Please try again.',
         error: error.message
       });
     }

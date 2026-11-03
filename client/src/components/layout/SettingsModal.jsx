@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Play, Trash2, X } from 'lucide-react';
+import { Languages, Play, Sparkles, Trash2, X } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext.jsx';
 import { LANGUAGES } from '../../utils/languages.js';
 import { voicesForLang, isKnownFemale } from '../../utils/voices.js';
@@ -33,10 +33,15 @@ export default function SettingsModal({ open, onClose, tts, chatCount, onClearAl
   const voiceLang = settings.lang === 'auto' ? 'en-IN' : settings.lang;
   const options = voicesForLang(tts.voices, voiceLang);
 
+  const previewText = {
+    'te-IN': 'నమస్కారం! నేను ARNA. మీకు ఎలా సహాయం చేయగలను?',
+    'hi-IN': 'नमस्ते! मैं ARNA हूँ। मैं आपकी कैसे मदद कर सकता हूँ?',
+  };
+
   const preview = () => {
     tts.cancel();
     tts.unlock();
-    tts.speak(voiceLang === 'te-IN' ? 'నమస్కారం! నేను ARNA. మీకు ఎలా సహాయం చేయగలను?' : `Hi${settings.name ? ` ${settings.name}` : ''}, I'm Arna. This is how I sound.`, { lang: voiceLang });
+    tts.speak(previewText[voiceLang] || `Hi${settings.name ? ` ${settings.name}` : ''}, I'm Arna. This is how I sound.`, { lang: voiceLang });
   };
 
   return (
@@ -62,44 +67,50 @@ export default function SettingsModal({ open, onClose, tts, chatCount, onClearAl
 
           <Row
             label="Voice input language"
-            hint="Auto follows the language in the recognized transcript. Browser speech recognition still uses your browser's language; choose a specific language below if it transcribes your speech incorrectly."
+            hint="For Hindi voice input, choose Hindi below. Auto uses your browser's speech-recognition language; browsers cannot reliably listen in every language at once."
           >
-            <div className="space-y-3 rounded-2xl border border-line bg-surface/70 p-3">
-              <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${settings.lang === 'auto' ? 'border-violet-400/60 bg-violet-500/10' : 'border-line hover:bg-surface2'}`}>
-                <input
-                  type="radio"
-                  name="voice-input-language"
-                  value="auto"
-                  checked={settings.lang === 'auto'}
-                  onChange={() => update({ lang: 'auto', voiceName: '' })}
-                  className="mt-0.5 h-4 w-4 accent-violet-500"
-                />
-                <span className="min-w-0">
-                  <span className="block text-sm font-medium">Auto (recommended)</span>
-                  <span className="mt-0.5 block text-xs text-muted">Reply in the language ARNA recognizes</span>
-                </span>
-              </label>
+            <div className="overflow-hidden rounded-2xl border border-violet-400/20 bg-gradient-to-br from-violet-500/10 via-surface/80 to-cyan-400/10 p-3 shadow-inner shadow-violet-500/5">
+              <div className="mb-3 flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-wider text-violet-300">
+                <Languages size={15} /> Speech recognition
+              </div>
+              <div className="space-y-2">
+                <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition ${settings.lang === 'auto' ? 'border-violet-400/60 bg-violet-500/15 shadow-md shadow-violet-950/20' : 'border-line/70 bg-black/5 hover:border-cyan-300/40 hover:bg-cyan-400/5'}`}>
+                  <input
+                    type="radio"
+                    name="voice-input-language"
+                    value="auto"
+                    checked={settings.lang === 'auto'}
+                    onChange={() => update({ lang: 'auto', voiceName: '' })}
+                    className="mt-0.5 h-4 w-4 accent-violet-500"
+                  />
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-violet-400/15 text-violet-300"><Sparkles size={16} /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-2 text-sm font-semibold">Auto <span className="rounded-full bg-cyan-300/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cyan-200">Default</span></span>
+                    <span className="mt-1 block text-xs leading-relaxed text-muted">Reply in the language ARNA recognizes from your transcript.</span>
+                  </span>
+                </label>
 
-              <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${settings.lang !== 'auto' ? 'border-violet-400/60 bg-violet-500/10' : 'border-line hover:bg-surface2'}`}>
-                <input
-                  type="radio"
-                  name="voice-input-language"
-                  value="manual"
-                  checked={settings.lang !== 'auto'}
-                  onChange={() => update({ lang: 'en-IN', voiceName: '' })}
-                  className="mt-0.5 h-4 w-4 accent-violet-500"
-                />
-                <span className="block text-sm font-medium">Choose a recognition language</span>
-              </label>
+                <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition ${settings.lang !== 'auto' ? 'border-cyan-300/50 bg-cyan-400/10 shadow-md shadow-cyan-950/20' : 'border-line/70 bg-black/5 hover:border-violet-300/40 hover:bg-violet-400/5'}`}>
+                  <input
+                    type="radio"
+                    name="voice-input-language"
+                    value="manual"
+                    checked={settings.lang !== 'auto'}
+                    onChange={() => update({ lang: 'hi-IN', voiceName: '' })}
+                    className="mt-0.5 h-4 w-4 accent-cyan-400"
+                  />
+                  <span className="block text-sm font-semibold">Choose a language <span className="mt-1 block text-xs font-normal text-muted">Best for Hindi and other non-browser-default languages.</span></span>
+                </label>
+              </div>
 
               {settings.lang !== 'auto' && (
-                <div className="ml-7 border-l-2 border-violet-400/30 pl-3">
-                  <label htmlFor="voice-recognition-language" className="mb-1.5 block text-xs font-medium text-muted">Speech recognition language</label>
+                <div className="ml-4 mt-3 rounded-xl border border-cyan-300/20 bg-cyan-400/5 p-3 sm:ml-11">
+                  <label htmlFor="voice-recognition-language" className="mb-1.5 block text-xs font-semibold text-cyan-200">I am speaking</label>
                   <select
                     id="voice-recognition-language"
                     value={settings.lang}
                     onChange={(e) => update({ lang: e.target.value, voiceName: '' })}
-                    className={field}
+                    className={`${field} border-cyan-300/20 bg-[#10172b] focus:border-cyan-300/60`}
                   >
                     {LANGUAGES.map((l) => (
                       <option key={l.code} value={l.code}>{l.label}</option>
@@ -118,6 +129,8 @@ export default function SettingsModal({ open, onClose, tts, chatCount, onClearAl
                 : options.length === 0
                   ? settings.lang === 'te-IN'
                     ? 'No Telugu voice is installed on your device. ARNA will use its online Telugu voice instead.'
+                    : settings.lang === 'hi-IN'
+                      ? 'No Hindi voice is installed on your device. ARNA will use its online Hindi voice instead.'
                     : 'No voice for this language is installed on your device. Install one in your system settings, or pick another language.'
                   : 'Auto picks the best female voice available on your device.'
             }
