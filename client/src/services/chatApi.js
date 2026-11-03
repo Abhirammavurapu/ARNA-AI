@@ -9,6 +9,8 @@ export const API_BASE = import.meta.env.DEV
     ? 'https://arna-ai-21.onrender.com'
     : '';
 
+export const AUTH_REQUIRED_EVENT = 'arna:auth-required';
+
 export class ApiError extends Error {
   constructor(message, code = 'ERROR') {
     super(message);
@@ -49,6 +51,13 @@ export async function streamChat({ messages, voice, lang, name, mode, signal, on
       code = j.error?.code || code;
     } catch {
       /* not JSON */
+    }
+    if (
+      res.status === 401 &&
+      typeof window !== 'undefined' &&
+      ['AUTH_REQUIRED', 'SESSION_EXPIRED'].includes(code)
+    ) {
+      window.dispatchEvent(new Event(AUTH_REQUIRED_EVENT));
     }
     throw new ApiError(message, code);
   }
