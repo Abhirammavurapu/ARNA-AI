@@ -114,6 +114,33 @@ test('system prompt explicitly requires the detected reply language', () => {
   );
 });
 
+test('voice replies follow the selected speech input language', () => {
+  assert.match(
+    buildSystemPrompt({
+      voice: true,
+      lang: 'en-IN',
+      latestMessage: 'నువ్వు ఎలా ఉన్నావు?',
+    }),
+    /REQUIRED RESPONSE LANGUAGE: English/
+  );
+  assert.match(
+    buildSystemPrompt({
+      voice: true,
+      lang: 'te-IN',
+      latestMessage: 'How are you?',
+    }),
+    /REQUIRED RESPONSE LANGUAGE: Telugu/
+  );
+  assert.match(
+    buildSystemPrompt({
+      voice: false,
+      lang: 'en-IN',
+      latestMessage: 'Nuvvu ela unnav?',
+    }),
+    /REQUIRED RESPONSE LANGUAGE: Telugu/
+  );
+});
+
 async function collect(res) {
   const text = await res.text();
   return text
