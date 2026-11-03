@@ -1,101 +1,192 @@
+
 import env from '../../config/env.js';
 import AppError from '../../utils/AppError.js';
 import { readSSE } from './sse.js';
 
 const MAX_OUTPUT_TOKENS = 2048;
 
-/** "data:image/png;base64,AAAA" -> { mime: "image/png", data: "AAAA" } */
+function geminiGenerationConfig(model) {
+  const config = {
+    temperature: 0.8,
+    maxOutputTokens: MAX_OUTPUT_TOKENS,
+  };
+
+  if (/^gemini-2\.5-flash(?:-|$)/i.test(model)) {
+    config.thinkingConfig = { thinkingBudget: 0 };
+  } else if (/^gemini-3(?:\.|-\d)/i.test(model)) {
+    config.thinkingConfig = { thinkingLevel: 'minimal' };
+  }
+
+  return config;
+}
+
+const OLLAMA_URL = (
+  process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434'
+).replace(/\/$/, '');
+
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5:3b';
+
+/** Convert a base64 image data URL into its MIME type and data. */
 function splitDataUrl(url) {
-  const m = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i.exec(url);
-  return m ? { mime: m[1].toLowerCase(), data: m[2] } : null;
+  const match = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i.exec(url);
+  return match
+    ? { mime: match[1].toLowerCase(), data: match[2] }
+    : null;
 }
 
 async function upstreamError(res, label) {
   let detail = '';
+
   try {
-    const j = await res.json();
-    detail = j?.error?.message || j?.message || JSON.stringify(j).slice(0, 300);
+    const data = await res.json();
+    detail =
+      data?.error?.message ||
+      data?.message ||
+      JSON.stringify(data).slice(0, 300);
   } catch {
-    /* body was not JSON */
+    // Response body was not JSON.
   }
+
   let status = 502;
   let code = 'AI_UPSTREAM_ERROR';
+
   if (res.status === 401 || res.status === 403) {
     code = 'AI_AUTH_ERROR';
-    detail = `The ${label} API key was rejected. Check the key in server/.env. ${detail}`;
+    detail = `${label} API key was rejected. Check the key in server/.env.`;
   } else if (res.status === 429) {
     status = 429;
     code = 'AI_RATE_LIMITED';
-    detail = `${label} rate limit or quota reached. Try again in a moment. ${detail}`;
+    detail =
+      'ARNA has reached its AI usage limit. Please try again later.';
   } else if (res.status === 400 || res.status === 404) {
-    detail = `${label} rejected the request (check the model name). ${detail}`;
+    detail = `${label} rejected the request. Check the model name. ${detail}`;
   }
-  return new AppError(detail.trim() || `${label} request failed (${res.status})`, status, code);
+
+  return new AppError(
+    detail.trim() || `${label} request failed (${res.status})`,
+    status,
+    code
+  );
 }
 
-// ---------------------------------------------------------------- Gemini ----
+// --------------------------------------------------------------- GEMINI ----
+
 async function* gemini({ system, messages, signal }) {
   const cfg = env.ai.gemini;
+
   const contents = messages.map((m) => ({
     role: m.role === 'assistant' ? 'model' : 'user',
     parts: [
-      ...(m.images || []).flatMap((u) => {
-        const f = splitDataUrl(u);
-        return f ? [{ inlineData: { mimeType: f.mime, data: f.data } }] : [];
+      ...(m.images || []).flatMap((url) => {
+        const image = splitDataUrl(url);
+
+        return image
+          ? [{
+              inlineData: {
+                mimeType: image.mime,
+                data: image.data,
+              },
+            }]
+          : [];
       }),
       { text: m.content || ' ' },
     ],
   }));
+
   const res = await fetch(
-    `${cfg.baseUrl}/v1beta/models/${encodeURIComponent(cfg.model)}:streamGenerateContent?alt=sse`,
+    `${cfg.baseUrl}/v1beta/models/${encodeURIComponent(
+      cfg.model
+    )}:streamGenerateContent?alt=sse`,
     {
       method: 'POST',
       signal,
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cfg.key },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': cfg.key,
+      },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system }] },
+        systemInstruction: {
+          parts: [{ text: system || 'You are ARNA, a helpful AI assistant.' }],
+        },
         contents,
-        generationConfig: { temperature: 0.8, maxOutputTokens: MAX_OUTPUT_TOKENS },
+        generationConfig: geminiGenerationConfig(cfg.model),
       }),
     }
   );
-  if (!res.ok) throw await upstreamError(res, 'Gemini');
+
+  if (!res.ok) {
+    throw await upstreamError(res, 'Gemini');
+  }
+
   let produced = false;
+
   for await (const data of readSSE(res.body, signal)) {
-    let evt;
+    let event;
+
     try {
-      evt = JSON.parse(data);
+      event = JSON.parse(data);
     } catch {
       continue;
     }
-    if (evt.promptFeedback?.blockReason) {
-      throw new AppError('That request was blocked by the AI safety filter.', 422, 'AI_BLOCKED');
+
+    if (event.promptFeedback?.blockReason) {
+      throw new AppError(
+        'That request was blocked by the AI safety filter.',
+        422,
+        'AI_BLOCKED'
+      );
     }
-    const cand = evt.candidates?.[0];
-    const text = (cand?.content?.parts || []).map((p) => p.text || '').join('');
+
+    const candidate = event.candidates?.[0];
+
+    const text = (candidate?.content?.parts || [])
+      .map((part) => part.text || '')
+      .join('');
+
     if (text) {
       produced = true;
       yield text;
     }
-    if (cand?.finishReason === 'SAFETY' && !produced) {
-      throw new AppError('That response was blocked by the AI safety filter.', 422, 'AI_BLOCKED');
+
+    if (candidate?.finishReason === 'SAFETY' && !produced) {
+      throw new AppError(
+        'That response was blocked by the AI safety filter.',
+        422,
+        'AI_BLOCKED'
+      );
     }
   }
 }
 
-// ------------------------------------------------------------- Anthropic ----
+// ------------------------------------------------------------- ANTHROPIC ----
+
 async function* anthropic({ system, messages, signal }) {
   const cfg = env.ai.anthropic;
+
   const apiMessages = messages.map((m) => {
-    const imgs = (m.images || []).flatMap((u) => {
-      const f = splitDataUrl(u);
-      return f ? [{ type: 'image', source: { type: 'base64', media_type: f.mime, data: f.data } }] : [];
+    const images = (m.images || []).flatMap((url) => {
+      const image = splitDataUrl(url);
+
+      return image
+        ? [{
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: image.mime,
+              data: image.data,
+            },
+          }]
+        : [];
     });
+
     return {
       role: m.role,
-      content: imgs.length ? [...imgs, { type: 'text', text: m.content || ' ' }] : m.content || ' ',
+      content: images.length
+        ? [...images, { type: 'text', text: m.content || ' ' }]
+        : m.content || ' ',
     };
   });
+
   const res = await fetch(`${cfg.baseUrl}/v1/messages`, {
     method: 'POST',
     signal,
@@ -112,63 +203,319 @@ async function* anthropic({ system, messages, signal }) {
       stream: true,
     }),
   });
-  if (!res.ok) throw await upstreamError(res, 'Anthropic');
+
+  if (!res.ok) {
+    throw await upstreamError(res, 'Anthropic');
+  }
+
   for await (const data of readSSE(res.body, signal)) {
-    let evt;
+    let event;
+
     try {
-      evt = JSON.parse(data);
+      event = JSON.parse(data);
     } catch {
       continue;
     }
-    if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta' && evt.delta.text) {
-      yield evt.delta.text;
-    } else if (evt.type === 'error') {
-      throw new AppError(evt.error?.message || 'Anthropic stream error', 502, 'AI_UPSTREAM_ERROR');
+
+    if (
+      event.type === 'content_block_delta' &&
+      event.delta?.type === 'text_delta' &&
+      event.delta.text
+    ) {
+      yield event.delta.text;
+    } else if (event.type === 'error') {
+      throw new AppError(
+        event.error?.message || 'Anthropic stream error',
+        502,
+        'AI_UPSTREAM_ERROR'
+      );
     }
   }
 }
 
-// ---------------------------------------------------------------- OpenAI ----
+// ---------------------------------------------------------------- OPENAI ----
+
 async function* openai({ system, messages, signal }) {
   const cfg = env.ai.openai;
+
   const apiMessages = [
-    { role: 'system', content: system },
+    { role: 'system', content: system || 'You are ARNA.' },
+
     ...messages.map((m) => {
-      const imgs = (m.images || []).map((u) => ({ type: 'image_url', image_url: { url: u } }));
+      const images = (m.images || []).map((url) => ({
+        type: 'image_url',
+        image_url: { url },
+      }));
+
       return {
         role: m.role,
-        content: imgs.length ? [{ type: 'text', text: m.content || ' ' }, ...imgs] : m.content || ' ',
+        content: images.length
+          ? [
+              { type: 'text', text: m.content || ' ' },
+              ...images,
+            ]
+          : m.content || ' ',
       };
     }),
   ];
+
   const res = await fetch(`${cfg.baseUrl}/v1/chat/completions`, {
     method: 'POST',
     signal,
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.key}` },
-    body: JSON.stringify({ model: cfg.model, messages: apiMessages, stream: true, max_tokens: MAX_OUTPUT_TOKENS }),
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${cfg.key}`,
+    },
+    body: JSON.stringify({
+      model: cfg.model,
+      messages: apiMessages,
+      stream: true,
+      max_tokens: MAX_OUTPUT_TOKENS,
+    }),
   });
-  if (!res.ok) throw await upstreamError(res, 'OpenAI');
+
+  if (!res.ok) {
+    throw await upstreamError(res, 'OpenAI');
+  }
+
   for await (const data of readSSE(res.body, signal)) {
     if (data === '[DONE]') return;
-    let evt;
+
+    let event;
+
     try {
-      evt = JSON.parse(data);
+      event = JSON.parse(data);
     } catch {
       continue;
     }
-    const text = evt.choices?.[0]?.delta?.content;
-    if (text) yield text;
+
+    const text = event.choices?.[0]?.delta?.content;
+
+    if (text) {
+      yield text;
+    }
   }
 }
 
-const adapters = { gemini, anthropic, openai };
+// --------------------------------------------------------------- OLLAMA ----
+
+async function* ollama({ system, messages, signal }) {
+  // Qwen 2.5:3b is a text model. Reject image-only latest requests.
+  const lastUserMessage = [...messages]
+    .reverse()
+    .find((message) => message.role === 'user');
+
+  if (
+    lastUserMessage?.images?.length &&
+    !lastUserMessage.content?.trim()
+  ) {
+    throw new AppError(
+      'ARNA local AI currently supports text messages, not image-only requests. Please describe the image in text.',
+      422,
+      'OLLAMA_TEXT_ONLY'
+    );
+  }
+
+  // IMPORTANT: Remove empty messages before sending them to Ollama.
+  const conversation = messages
+    .map((message) => ({
+      role: message.role === 'assistant' ? 'assistant' : 'user',
+      content:
+        typeof message.content === 'string'
+          ? message.content.trim()
+          : '',
+    }))
+    .filter((message) => message.content.length > 0);
+
+  if (!conversation.some((message) => message.role === 'user')) {
+    throw new AppError(
+      'Please enter a message before asking ARNA.',
+      400,
+      'EMPTY_MESSAGE'
+    );
+  }
+
+  const apiMessages = [
+    {
+      role: 'system',
+      content:
+        system ||
+        'You are ARNA, a friendly, helpful and conversational AI assistant. Answer clearly and naturally.',
+    },
+    ...conversation,
+  ];
+
+  let res;
+
+  try {
+    res = await fetch(`${OLLAMA_URL}/api/chat`, {
+      method: 'POST',
+      signal,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: OLLAMA_MODEL,
+        messages: apiMessages,
+        stream: true,
+        options: {
+          temperature: 0.7,
+          num_predict: MAX_OUTPUT_TOKENS,
+        },
+      }),
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw err;
+    }
+
+    throw new AppError(
+      'ARNA local AI is unavailable. Make sure Ollama is running on your computer.',
+      503,
+      'OLLAMA_UNAVAILABLE'
+    );
+  }
+
+  if (!res.ok) {
+    let detail = '';
+
+    try {
+      const data = await res.json();
+      detail = data.error || '';
+    } catch {
+      // Ignore invalid response body.
+    }
+
+    throw new AppError(
+      detail || 'ARNA could not connect to its local AI model.',
+      503,
+      'OLLAMA_ERROR'
+    );
+  }
+
+  if (!res.body) {
+    throw new AppError(
+      'Ollama returned an empty response.',
+      502,
+      'OLLAMA_EMPTY_RESPONSE'
+    );
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+
+  let buffer = '';
+
+  async function processLine(line) {
+    if (!line.trim()) return '';
+
+    let event;
+
+    try {
+      event = JSON.parse(line);
+    } catch {
+      return '';
+    }
+
+    if (event.error) {
+      throw new AppError(
+        event.error,
+        502,
+        'OLLAMA_ERROR'
+      );
+    }
+
+    return event.message?.content || '';
+  }
+
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const text = await processLine(line);
+
+        if (text) {
+          yield text;
+        }
+      }
+    }
+
+    buffer += decoder.decode();
+
+    if (buffer.trim()) {
+      const text = await processLine(buffer);
+
+      if (text) {
+        yield text;
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+// --------------------------------------------------------------- ROUTER ----
+
+const adapters = {
+  gemini,
+  anthropic,
+  openai,
+};
 
 /**
- * Open a stream of text deltas from the configured provider.
- * Throws AppError before yielding when the request is rejected upstream.
+ * Gemini is the primary provider.
+ * If Gemini reaches its quota before producing a response,
+ * automatically use the local Ollama model.
  */
 export async function* streamChat(args) {
-  const adapter = adapters[env.ai.provider];
-  if (!adapter) throw new AppError(`Unknown AI provider "${env.ai.provider}"`, 500, 'AI_NOT_CONFIGURED');
-  yield* adapter(args);
+  const provider = env.ai.provider;
+  const adapter = adapters[provider];
+
+  if (!adapter) {
+    throw new AppError(
+      `Unknown AI provider "${provider}"`,
+      500,
+      'AI_NOT_CONFIGURED'
+    );
+  }
+
+  // Preserve the existing behavior for other configured providers.
+  if (provider !== 'gemini') {
+    yield* adapter(args);
+    return;
+  }
+
+  let produced = false;
+
+  try {
+    for await (const chunk of gemini(args)) {
+      produced = true;
+      yield chunk;
+    }
+  } catch (err) {
+    // Do not retry using Ollama if the request was cancelled.
+    if (err.name === 'AbortError') {
+      throw err;
+    }
+
+    // Switch only when Gemini returns a quota/rate-limit error
+    // before producing any response text.
+    if (err.code !== 'AI_RATE_LIMITED' || produced) {
+      throw err;
+    }
+
+    console.log(
+      '[ARNA] Gemini quota reached. Switching to local Ollama AI.'
+    );
+
+    yield* ollama(args);
+  }
 }

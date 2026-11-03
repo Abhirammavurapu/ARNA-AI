@@ -14,6 +14,8 @@ import authRoutes from './routes/auth.js';
 
 import liveRoutes from './routes/live.js';
 
+import ttsRoutes from './routes/tts.js';
+
 export function createApp() {
   const app = express();
 
@@ -26,6 +28,7 @@ export function createApp() {
   // Chat bodies may carry a few base64 images.
   app.use(express.json({ limit: '20mb' }));
   app.use(cookieParser());
+  app.use('/api/tts', ttsRoutes);
   app.use(morgan(env.isProd ? 'combined' : 'dev'));
 
   app.use('/api', globalLimiter);

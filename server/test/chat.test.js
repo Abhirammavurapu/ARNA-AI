@@ -1,10 +1,19 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
+import jwt from 'jsonwebtoken';
 
 process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = 'arna-test-session-secret-with-at-least-32-characters';
 const { default: env } = await import('../src/config/env.js');
 const { createApp } = await import('../src/app.js');
+const { buildSystemPrompt, detectLanguageStyle } = await import('../src/services/ai/prompt.js');
+
+const session = jwt.sign(
+  { sub: 'test-user' },
+  process.env.JWT_SECRET,
+  { issuer: 'arna-ai' }
+);
 
 let upstream, api, upstreamPort, apiPort;
 const seen = [];
@@ -66,9 +75,44 @@ after(() => {
 const post = (body) =>
   fetch(`http://127.0.0.1:${apiPort}/api/chat`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Cookie: `arna_session=${session}`,
+    },
     body: JSON.stringify(body),
   });
+
+test('detects Telugu script and common Roman Telugu while preserving English', () => {
+  for (const message of [
+    'Nuvvu ela unnav?',
+    'naku coding nerpinchu',
+    'Naaku oka doubt undhi, help cheyyi',
+    'Hi, naaku Java nerpinchu',
+    'నాకు Python నేర్పించు',
+  ]) {
+    assert.equal(detectLanguageStyle(message), 'TELUGU', message);
+  }
+
+  for (const message of [
+    'Hello ARNA, how are you?',
+    'Can you teach me Java?',
+    'What is Telugu grammar?',
+    'Can you show me how to learn Python?',
+  ]) {
+    assert.equal(detectLanguageStyle(message), 'ENGLISH', message);
+  }
+});
+
+test('system prompt explicitly requires the detected reply language', () => {
+  assert.match(
+    buildSystemPrompt({ latestMessage: 'Naku coding nerpinchu' }),
+    /REQUIRED RESPONSE LANGUAGE: Telugu/
+  );
+  assert.match(
+    buildSystemPrompt({ latestMessage: 'Please teach me coding' }),
+    /REQUIRED RESPONSE LANGUAGE: English/
+  );
+});
 
 async function collect(res) {
   const text = await res.text();
