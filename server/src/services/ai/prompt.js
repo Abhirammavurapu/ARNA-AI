@@ -60,13 +60,7 @@ export function buildSystemPrompt({
       ?.content ||
     '';
 
-  const voiceLanguage = voice
-    ? String(lang).toLowerCase().split('-')[0]
-    : '';
-  const language =
-    voiceLanguage === 'te' || voiceLanguage === 'en'
-      ? voiceLanguage === 'te' ? 'TELUGU' : 'ENGLISH'
-      : detectLanguageStyle(currentMessage);
+  const language = detectLanguageStyle(currentMessage);
 
   const parts = [
     `You are ARNA, a friendly, intelligent and helpful AI assistant.`,
