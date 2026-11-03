@@ -105,7 +105,7 @@ export default function LiveVoice({ onClose, chat, tts, lang, name }) {
   };
 
   const state = phase === 'listening' || phase === 'thinking' || phase === 'speaking' ? phase : 'idle';
-  const shown = err || rec.error;
+  const shown = err || rec.error || tts.error;
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col bg-bg" style={{ background: 'radial-gradient(60rem 40rem at 50% 30%, var(--glow-1), transparent 65%), var(--bg)' }} role="dialog" aria-modal="true" aria-label="Live voice conversation">

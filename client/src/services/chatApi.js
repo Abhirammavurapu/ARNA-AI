@@ -1,7 +1,7 @@
 const DEFAULT_PRODUCTION_API_URL = 'https://arna-ai-21.onrender.com';
 const configuredApiUrl = import.meta.env.VITE_API_URL?.trim().replace(/\/$/, '');
 const localApiUrl = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configuredApiUrl || '');
-const API_BASE = import.meta.env.DEV
+export const API_BASE = import.meta.env.DEV
   ? configuredApiUrl || ''
   : configuredApiUrl && !localApiUrl
     ? configuredApiUrl

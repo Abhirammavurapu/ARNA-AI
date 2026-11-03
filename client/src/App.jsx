@@ -169,6 +169,7 @@ export default function App() {
             No AI key is set on the server yet. Add <code>GEMINI_API_KEY</code> (free) to <code>server/.env</code> and restart.
           </Banner>
         )}
+        {tts.error && <Banner>{tts.error}</Banner>}
 
         <div ref={scrollRef} onScroll={onScroll} className="scroll-y min-h-0 flex-1">
           {chat.active ? (

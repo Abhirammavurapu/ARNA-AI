@@ -9,11 +9,17 @@ import {
 
 import { pickVoice, isKnownFemale } from '../utils/voices.js';
 import { chunkForSpeech } from '../utils/speech.js';
+import { API_BASE } from '../services/chatApi.js';
 
 const synth =
   typeof window !== 'undefined'
     ? window.speechSynthesis
     : undefined;
+const AudioContextClass =
+  typeof window !== 'undefined'
+    ? window.AudioContext || window.webkitAudioContext
+    : undefined;
+const audioSupported = typeof Audio !== 'undefined';
 
 // Detect the language of the actual response.
 function detectSpeechLanguage(text = '') {
@@ -56,16 +62,22 @@ export function useTTS({
   voiceName,
   rate = 1
 } = {}) {
-  const supported = Boolean(synth);
+  const supported = Boolean(synth || audioSupported);
 
   const [voices, setVoices] = useState([]);
   const [speaking, setSpeaking] = useState(false);
+  const [error, setError] = useState('');
 
   const queue = useRef([]);
   const active = useRef(false);
   const generation = useRef(0);
   const waiters = useRef([]);
   const watchdog = useRef(0);
+  const audioContext = useRef(null);
+  const audioSource = useRef(null);
+  const audioElement = useRef(null);
+  const audioUrl = useRef('');
+  const audioRequest = useRef(null);
 
   // Load browser voices
   useEffect(() => {
@@ -104,8 +116,8 @@ export function useTTS({
     callbacks.forEach(callback => callback());
   }, []);
 
-  const pump = useCallback(() => {
-    if (!synth || active.current) return;
+  const pump = useCallback(function pumpSpeech() {
+    if ((!synth && !audioSupported) || active.current) return;
 
     const item = queue.current.shift();
 
@@ -135,9 +147,121 @@ export function useTTS({
       preferredName
     );
 
+    let finished = false;
+
+    const next = () => {
+      if (finished || gen !== generation.current) return;
+
+      finished = true;
+
+      clearTimeout(watchdog.current);
+
+      if (audioRequest.current) {
+        audioRequest.current.abort();
+        audioRequest.current = null;
+      }
+      if (audioSource.current) {
+        audioSource.current.onended = null;
+        try {
+          audioSource.current.stop();
+        } catch {
+          // The source may have already stopped.
+        }
+        audioSource.current = null;
+      }
+      if (audioElement.current) {
+        audioElement.current.onended = null;
+        audioElement.current.onerror = null;
+        audioElement.current.pause();
+        audioElement.current = null;
+      }
+      if (audioUrl.current) {
+        URL.revokeObjectURL(audioUrl.current);
+        audioUrl.current = '';
+      }
+
+      active.current = false;
+
+      pumpSpeech();
+    };
+
+    let fallbackStarted = false;
+    const playTeluguFallback = () => {
+      if (fallbackStarted || finished) return;
+      fallbackStarted = true;
+
+      const controller = new AbortController();
+      audioRequest.current = controller;
+      clearTimeout(watchdog.current);
+      watchdog.current = setTimeout(() => {
+        setError('Telugu voice generation timed out. Please try again.');
+        next();
+      }, 60000);
+
+      fetch(`${API_BASE}/api/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, gender: 'female' }),
+        signal: controller.signal,
+      })
+        .then(async (response) => {
+          if (!response.ok) {
+            const result = await response.json().catch(() => ({}));
+            throw new Error(result.message || 'Telugu voice generation failed.');
+          }
+          return response.blob();
+        })
+        .then(async (audioBlob) => {
+          if (gen !== generation.current) return;
+
+          const context = audioContext.current;
+          if (context && AudioContextClass) {
+            try {
+              if (context.state === 'suspended') await context.resume();
+              const buffer = await context.decodeAudioData(await audioBlob.arrayBuffer());
+              if (gen !== generation.current) return;
+              const source = context.createBufferSource();
+              source.buffer = buffer;
+              source.connect(context.destination);
+              source.onended = next;
+              audioSource.current = source;
+              source.start();
+              return;
+            } catch {
+              if (gen !== generation.current) return;
+            }
+          }
+
+          audioUrl.current = URL.createObjectURL(audioBlob);
+          const audio = new Audio(audioUrl.current);
+          audioElement.current = audio;
+          audio.onended = next;
+          audio.onerror = () => {
+            setError('Could not play Telugu audio. Check your device volume and try again.');
+            next();
+          };
+          return audio.play();
+        })
+        .catch((playbackError) => {
+          if (playbackError.name === 'AbortError' || gen !== generation.current) return;
+          setError(playbackError.message || 'Could not play the Telugu voice reply.');
+          next();
+        });
+    };
+
+    if (language === 'te-IN' && !selectedVoice && audioSupported) {
+      playTeluguFallback();
+      return;
+    }
+
+    if (!synth) {
+      setError('Speech output is not supported in this browser.');
+      next();
+      return;
+    }
+
     const utterance = new SpeechSynthesisUtterance(text);
 
-    // Use only a matching language voice
     if (
       selectedVoice &&
       selectedVoice.lang?.toLowerCase().startsWith(
@@ -149,45 +273,53 @@ export function useTTS({
 
     utterance.lang =
       (utterance.voice && utterance.voice.lang) || language;
-
     utterance.rate = speechRate;
-
     utterance.pitch = isKnownFemale(selectedVoice) ? 1.03 : 1.05;
     utterance.volume = 1;
-
-    let finished = false;
-
-    const next = () => {
-      if (finished || gen !== generation.current) return;
-
-      finished = true;
-
-      clearTimeout(watchdog.current);
-
-      active.current = false;
-
-      pump();
+    utterance.onend = next;
+    utterance.onerror = () => {
+      if (language === 'te-IN' && audioSupported) {
+        synth.cancel();
+        playTeluguFallback();
+        return;
+      }
+      setError('Speech playback failed. Check your device audio settings.');
+      next();
     };
 
-    utterance.onend = next;
-    utterance.onerror = next;
-
     clearTimeout(watchdog.current);
-
     watchdog.current = setTimeout(
-      next,
+      () => {
+        if (language === 'te-IN' && audioSupported) {
+          synth.cancel();
+          playTeluguFallback();
+          return;
+        }
+        next();
+      },
       4000 + (text.length * 120) / Math.max(0.5, speechRate)
     );
 
     try {
       synth.speak(utterance);
     } catch {
+      setError('Speech playback failed. Check your device audio settings.');
       next();
     }
   }, [settle]);
 
   // Unlock browser speech after a user interaction
   const unlock = useCallback(() => {
+    try {
+      if (AudioContextClass && !audioContext.current) {
+        audioContext.current = new AudioContextClass();
+      }
+      if (audioContext.current?.state === 'suspended') {
+        audioContext.current.resume().catch(() => {});
+      }
+    } catch {
+      audioContext.current = null;
+    }
     if (!synth) return;
 
     try {
@@ -201,8 +333,10 @@ export function useTTS({
 
   // Speak text using its detected language
   const speak = useCallback(
-    (text, options = {}) => {
-      if (!synth || !text || !String(text).trim()) return;
+    (text, _options = {}) => {
+      if ((!synth && !audioSupported) || !text || !String(text).trim()) return;
+
+      setError('');
 
       // Determine language separately for every response.
       const language = detectSpeechLanguage(String(text));
@@ -229,6 +363,22 @@ export function useTTS({
     active.current = false;
 
     clearTimeout(watchdog.current);
+    audioRequest.current?.abort();
+    audioRequest.current = null;
+    if (audioSource.current) {
+      try {
+        audioSource.current.stop();
+      } catch {
+        // The source may have already stopped.
+      }
+    }
+    audioSource.current = null;
+    audioElement.current?.pause();
+    audioElement.current = null;
+    if (audioUrl.current) {
+      URL.revokeObjectURL(audioUrl.current);
+      audioUrl.current = '';
+    }
 
     try {
       synth?.cancel();
@@ -251,7 +401,11 @@ export function useTTS({
 
   // Cleanup
   useEffect(() => {
-    return () => cancel();
+    return () => {
+      cancel();
+      audioContext.current?.close();
+      audioContext.current = null;
+    };
   }, [cancel]);
 
   // Stop speech when browser tab is hidden
@@ -272,6 +426,7 @@ export function useTTS({
     voices,
     voice,
     speaking,
+    error,
     speak,
     cancel,
     unlock,

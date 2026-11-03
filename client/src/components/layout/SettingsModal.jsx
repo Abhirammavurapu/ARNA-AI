@@ -75,7 +75,9 @@ export default function SettingsModal({ open, onClose, tts, chatCount, onClearAl
               !tts.supported
                 ? 'Spoken replies are not supported in this browser.'
                 : options.length === 0
-                  ? 'No voice for this language is installed on your device. Install one in your system settings, or pick another language.'
+                  ? settings.lang === 'te-IN'
+                    ? 'No Telugu voice is installed on your device. ARNA will use its online Telugu voice instead.'
+                    : 'No voice for this language is installed on your device. Install one in your system settings, or pick another language.'
                   : 'Auto picks the best female voice available on your device.'
             }
           >
