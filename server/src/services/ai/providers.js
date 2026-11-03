@@ -26,9 +26,9 @@ const OLLAMA_URL = (
 
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5:3b';
 
-/** Convert a base64 image data URL into its MIME type and data. */
 function splitDataUrl(url) {
   const match = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i.exec(url);
+
   return match
     ? { mime: match[1].toLowerCase(), data: match[2] }
     : null;
@@ -39,6 +39,7 @@ async function upstreamError(res, label) {
 
   try {
     const data = await res.json();
+
     detail =
       data?.error?.message ||
       data?.message ||
@@ -51,14 +52,22 @@ async function upstreamError(res, label) {
   let code = 'AI_UPSTREAM_ERROR';
 
   if (res.status === 401 || res.status === 403) {
+    status = 502;
     code = 'AI_AUTH_ERROR';
-    detail = `${label} API key was rejected. Check the key in server/.env.`;
+    detail = `${label} API key was rejected. Check your API key in Render Environment.`;
   } else if (res.status === 429) {
     status = 429;
     code = 'AI_RATE_LIMITED';
-    detail =
-      'ARNA has reached its AI usage limit. Please try again later.';
+    detail = 'ARNA has reached its AI usage limit. Please try again later.';
+  } else if (
+    [500, 502, 503, 504].includes(res.status)
+  ) {
+    status = 503;
+    code = 'AI_TEMPORARILY_UNAVAILABLE';
+    detail = `${label} is temporarily unavailable. Please try again. ${detail}`;
   } else if (res.status === 400 || res.status === 404) {
+    status = 502;
+    code = 'AI_REQUEST_ERROR';
     detail = `${label} rejected the request. Check the model name. ${detail}`;
   }
 
@@ -106,7 +115,11 @@ async function* gemini({ system, messages, signal }) {
       },
       body: JSON.stringify({
         systemInstruction: {
-          parts: [{ text: system || 'You are ARNA, a helpful AI assistant.' }],
+          parts: [
+            {
+              text: system || 'You are ARNA, a helpful AI assistant.',
+            },
+          ],
         },
         contents,
         generationConfig: geminiGenerationConfig(cfg.model),
@@ -300,7 +313,6 @@ async function* openai({ system, messages, signal }) {
 // --------------------------------------------------------------- OLLAMA ----
 
 async function* ollama({ system, messages, signal }) {
-  // Qwen 2.5:3b is a text model. Reject image-only latest requests.
   const lastUserMessage = [...messages]
     .reverse()
     .find((message) => message.role === 'user');
@@ -316,7 +328,6 @@ async function* ollama({ system, messages, signal }) {
     );
   }
 
-  // IMPORTANT: Remove empty messages before sending them to Ollama.
   const conversation = messages
     .map((message) => ({
       role: message.role === 'assistant' ? 'assistant' : 'user',
@@ -470,11 +481,33 @@ const adapters = {
   openai,
 };
 
-/**
- * Gemini is the primary provider.
- * If Gemini reaches its quota before producing a response,
- * automatically use the local Ollama model.
- */
+function waitForRetry(ms, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      const error = new Error('Request cancelled');
+      error.name = 'AbortError';
+      reject(error);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+
+    function onAbort() {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', onAbort);
+
+      const error = new Error('Request cancelled');
+      error.name = 'AbortError';
+      reject(error);
+    }
+
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
 export async function* streamChat(args) {
   const provider = env.ai.provider;
   const adapter = adapters[provider];
@@ -487,35 +520,46 @@ export async function* streamChat(args) {
     );
   }
 
-  // Preserve the existing behavior for other configured providers.
   if (provider !== 'gemini') {
     yield* adapter(args);
     return;
   }
 
-  let produced = false;
+  const maxAttempts = 3;
+  const retryableCodes = new Set([
+    'AI_RATE_LIMITED',
+    'AI_TEMPORARILY_UNAVAILABLE',
+  ]);
 
-  try {
-    for await (const chunk of gemini(args)) {
-      produced = true;
-      yield chunk;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    let produced = false;
+
+    try {
+      for await (const chunk of gemini(args)) {
+        produced = true;
+        yield chunk;
+      }
+
+      return;
+    } catch (err) {
+      if (err.name === 'AbortError' || produced) {
+        throw err;
+      }
+
+      if (
+        !retryableCodes.has(err.code) ||
+        attempt === maxAttempts
+      ) {
+        throw err;
+      }
+
+      const delay = attempt * 2000;
+
+      console.log(
+        `[ARNA] Gemini temporarily unavailable. Retry ${attempt + 1}/${maxAttempts} in ${delay}ms.`
+      );
+
+      await waitForRetry(delay, args.signal);
     }
-  } catch (err) {
-    // Do not retry using Ollama if the request was cancelled.
-    if (err.name === 'AbortError') {
-      throw err;
-    }
-
-    // Switch only when Gemini returns a quota/rate-limit error
-    // before producing any response text.
-    if (err.code !== 'AI_RATE_LIMITED' || produced) {
-      throw err;
-    }
-
-    console.log(
-      '[ARNA] Gemini quota reached. Switching to local Ollama AI.'
-    );
-
-    yield* ollama(args);
   }
 }
