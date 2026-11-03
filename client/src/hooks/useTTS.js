@@ -254,7 +254,7 @@ export function useTTS({
         });
     };
 
-    if (['te-IN', 'hi-IN'].includes(language) && !selectedVoice && audioSupported) {
+    if (['te-IN', 'hi-IN'].includes(language) && audioSupported) {
       playNeuralFallback();
       return;
     }

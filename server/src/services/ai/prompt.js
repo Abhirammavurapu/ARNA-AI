@@ -63,7 +63,6 @@ export function detectLanguageStyle(text = '') {
 
 export function buildSystemPrompt({
   voice = false,
-  lang = 'auto',
   name = '',
   mode = 'friendly',
   messages = [],
@@ -78,13 +77,7 @@ export function buildSystemPrompt({
       ?.content ||
     '';
 
-  const voiceLanguage = voice && lang !== 'auto'
-    ? String(lang).toLowerCase().split('-')[0]
-    : '';
-  let language = detectLanguageStyle(currentMessage);
-  if (voiceLanguage === 'te') language = 'TELUGU';
-  if (voiceLanguage === 'hi') language = 'HINDI';
-  if (voiceLanguage === 'en') language = 'ENGLISH';
+  const language = detectLanguageStyle(currentMessage);
   const languageName = {
     ENGLISH: 'English',
     HINDI: 'Hindi',

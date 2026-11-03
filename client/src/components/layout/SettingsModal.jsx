@@ -67,7 +67,7 @@ export default function SettingsModal({ open, onClose, tts, chatCount, onClearAl
 
           <Row
             label="Voice input language"
-            hint="For Hindi voice input, choose Hindi below. Auto uses your browser's speech-recognition language; browsers cannot reliably listen in every language at once."
+            hint="This selects the microphone's recognition language, not ARNA's reply language. Set it to Hindi for Hindi speech or Telugu for Telugu speech. Auto uses your browser's language and cannot reliably switch languages mid-session."
           >
             <div className="overflow-hidden rounded-2xl border border-violet-400/20 bg-gradient-to-br from-violet-500/10 via-surface/80 to-cyan-400/10 p-3 shadow-inner shadow-violet-500/5">
               <div className="mb-3 flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-wider text-violet-300">
@@ -86,7 +86,7 @@ export default function SettingsModal({ open, onClose, tts, chatCount, onClearAl
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-violet-400/15 text-violet-300"><Sparkles size={16} /></span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2 text-sm font-semibold">Auto <span className="rounded-full bg-cyan-300/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cyan-200">Default</span></span>
-                    <span className="mt-1 block text-xs leading-relaxed text-muted">Reply in the language ARNA recognizes from your transcript.</span>
+                    <span className="mt-1 block text-xs leading-relaxed text-muted">Uses your browser's recognition language; reply follows the transcript.</span>
                   </span>
                 </label>
 
@@ -99,7 +99,7 @@ export default function SettingsModal({ open, onClose, tts, chatCount, onClearAl
                     onChange={() => update({ lang: 'hi-IN', voiceName: '' })}
                     className="mt-0.5 h-4 w-4 accent-cyan-400"
                   />
-                  <span className="block text-sm font-semibold">Choose a language <span className="mt-1 block text-xs font-normal text-muted">Best for Hindi and other non-browser-default languages.</span></span>
+                  <span className="block text-sm font-semibold">Choose a language <span className="mt-1 block text-xs font-normal text-muted">Choose Hindi or Telugu to improve recognition accuracy.</span></span>
                 </label>
               </div>
 
