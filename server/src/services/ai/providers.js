@@ -251,11 +251,31 @@ async function* openai(
   cfg = env.ai.openai,
   label = 'OpenAI'
 ) {
+  const hasImages = messages.some((message) => message.images?.length);
+  const groqImages = new Map();
+  if (label === 'Groq') {
+    let remainingImages = 3;
+    for (let i = messages.length - 1; i >= 0 && remainingImages > 0; i -= 1) {
+      const message = messages[i];
+      const images = (message.images || []).slice(0, remainingImages);
+      if (images.length) {
+        groqImages.set(message, images);
+        remainingImages -= images.length;
+      }
+    }
+  }
+
+  const model = label === 'Groq' && hasImages
+    ? cfg.visionModel || 'qwen/qwen3.8-27b'
+    : cfg.model;
   const apiMessages = [
     { role: 'system', content: system || 'You are ARNA.' },
 
     ...messages.map((m) => {
-      const images = (m.images || []).map((url) => ({
+      const messageImages = label === 'Groq'
+        ? groqImages.get(m) || []
+        : m.images || [];
+      const images = messageImages.map((url) => ({
         type: 'image_url',
         image_url: { url },
       }));
@@ -280,7 +300,7 @@ async function* openai(
       Authorization: `Bearer ${cfg.key}`,
     },
     body: JSON.stringify({
-      model: cfg.model,
+      model,
       messages: apiMessages,
       stream: true,
       max_tokens: MAX_OUTPUT_TOKENS,

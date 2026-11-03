@@ -4,7 +4,7 @@ A Gemini-style AI assistant with a **3D animated orb**, **voice input (mic)** an
 
 ## Features
 - **Streaming chat** with Markdown, tables, syntax-highlighted code (copy button), regenerate, stop
-- **Image understanding** — attach or paste up to 4 images
+- **Image understanding** — attach or paste up to 3 images, or choose a folder to attach its images
 - **Mic button** — talk, and ARNA answers out loud in a female voice
 - **Live mode** — hands-free conversation (listen → think → speak → listen); tap the orb to interrupt
 - **Female voice auto-selection** across Chrome, Edge, Android and iOS/macOS, with a voice picker and preview
@@ -13,6 +13,8 @@ A Gemini-style AI assistant with a **3D animated orb**, **voice input (mic)** an
 - **Assistant modes** — Health Assistant, Interview Preparation and Friendly Chat dashboard cards
 - Chat history (search, rename, delete), light/dark theme, mobile drawer layout
 - AI providers: **Google Gemini (free tier)**, Anthropic Claude, OpenAI — whichever key you set
+
+When Groq is selected, ARNA automatically uses Groq's vision model for image requests and its configured text model for text-only requests. Folder selection attaches image files only; other files are ignored.
 
 ## Run locally
 ```bash

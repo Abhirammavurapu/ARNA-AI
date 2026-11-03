@@ -254,6 +254,54 @@ test('images are forwarded in each provider format', async () => {
   assert.equal(seen.at(-1).body.messages[1].content[1].image_url.url, img);
 });
 
+test('Groq uses its vision model for image messages', async () => {
+  const img = 'data:image/jpeg;base64,/9j/4AAQSkZJRg==';
+  env.ai.provider = 'groq';
+  env.ai.groq.model = 'openai/gpt-oss-20b';
+  env.ai.groq.visionModel = 'qwen/qwen3.8-27b';
+  await (await post({
+    messages: [{ role: 'user', content: 'What is in this picture?', images: [img] }],
+  })).text();
+
+  const request = seen.at(-1).body;
+  assert.equal(request.model, 'qwen/qwen3.8-27b');
+  assert.equal(request.messages[1].content[1].image_url.url, img);
+});
+
+test('Groq includes only the 3 most recent images from conversation history', async () => {
+  const image = 'data:image/png;base64,iVBORw0KGgo=';
+  env.ai.provider = 'groq';
+  const olderImage = 'data:image/jpeg;base64,/9j/4AAQSkZJRg==';
+  const newestImage = 'data:image/webp;base64,UklGRg==';
+  await (await post({
+    messages: [
+      { role: 'user', content: 'Look at this old photo', images: [olderImage] },
+      { role: 'assistant', content: 'Okay' },
+      { role: 'user', content: 'Compare these', images: [image, image, newestImage] },
+    ],
+  })).text();
+  const content = seen.at(-1).body.messages.flatMap((message) =>
+    Array.isArray(message.content)
+      ? message.content.filter((part) => part.type === 'image_url')
+      : []
+  );
+  assert.equal(content.length, 3);
+  assert.deepEqual(
+    content.map((part) => part.image_url.url),
+    [image, image, newestImage]
+  );
+  assert.equal(seen.at(-1).body.model, 'qwen/qwen3.8-27b');
+});
+
+test('Groq uses its text model for text-only conversations', async () => {
+  env.ai.provider = 'groq';
+  env.ai.groq.model = 'openai/gpt-oss-20b';
+  await (await post({
+    messages: [{ role: 'user', content: 'Hello' }],
+  })).text();
+  assert.equal(seen.at(-1).body.model, 'openai/gpt-oss-20b');
+});
+
 test('rejects bad input with 400', async () => {
   env.ai.provider = 'gemini';
   for (const body of [

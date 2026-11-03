@@ -20,6 +20,7 @@ const ai = {
   groq: {
     key: str('GROQ_API_KEY'),
     model: str('GROQ_MODEL', 'openai/gpt-oss-20b'),
+    visionModel: str('GROQ_VISION_MODEL', 'qwen/qwen3.8-27b'),
     baseUrl: str('GROQ_BASE_URL', 'https://api.groq.com/openai').replace(/\/$/, ''),
   },
   anthropic: {

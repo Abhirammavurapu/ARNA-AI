@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUp, AudioLines, ImagePlus, Mic, Square, X } from 'lucide-react';
+import { ArrowUp, AudioLines, FolderOpen, ImagePlus, Mic, Square, X } from 'lucide-react';
 import { useRecognition } from '../../hooks/useRecognition.js';
 import { fileToDataUrl } from '../../utils/image.js';
 import { isTouchDevice } from '../../utils/device.js';
 
-const MAX_IMAGES = 4;
+const MAX_IMAGES = 3;
 
 export default function Composer({ busy, lang, onSend, onStop, onGesture, onOpenLive, liveDisabled }) {
   const [text, setText] = useState('');
@@ -13,6 +13,7 @@ export default function Composer({ busy, lang, onSend, onStop, onGesture, onOpen
   const [notice, setNotice] = useState('');
   const taRef = useRef(null);
   const fileRef = useRef(null);
+  const folderRef = useRef(null);
   const draft = useRef({ text: '', images: [] });
   draft.current = { text, images };
 
@@ -46,12 +47,16 @@ export default function Composer({ busy, lang, onSend, onStop, onGesture, onOpen
 
   const addFiles = async (files) => {
     const list = [...files].filter((f) => f.type.startsWith('image/'));
-    if (!list.length) return;
+    if (!list.length) {
+      if (files.length) setNotice('Folders can be attached when they contain images.');
+      return;
+    }
     const room = MAX_IMAGES - images.length;
     if (room <= 0) return setNotice(`You can attach up to ${MAX_IMAGES} images.`);
     try {
       const urls = await Promise.all(list.slice(0, room).map(fileToDataUrl));
       setImages((cur) => [...cur, ...urls].slice(0, MAX_IMAGES));
+      if (list.length > room) setNotice(`Attached ${room} images. You can attach up to ${MAX_IMAGES} images per message.`);
     } catch (err) {
       setNotice(err.message);
     }
@@ -148,6 +153,7 @@ export default function Composer({ busy, lang, onSend, onStop, onGesture, onOpen
           )}
           <div className="flex items-center gap-1">
             <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
+            <input ref={folderRef} type="file" accept="image/*" multiple webkitdirectory="" directory="" hidden onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
             <button
               onClick={() => fileRef.current?.click()}
               aria-label="Attach image"
@@ -155,6 +161,14 @@ export default function Composer({ busy, lang, onSend, onStop, onGesture, onOpen
               className="grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-surface2 hover:text-fg"
             >
               <ImagePlus size={20} />
+            </button>
+            <button
+              onClick={() => folderRef.current?.click()}
+              aria-label="Attach images from folder"
+              title="Attach images from folder"
+              className="grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-surface2 hover:text-fg"
+            >
+              <FolderOpen size={19} />
             </button>
             <div className="flex-1" />
             <button
