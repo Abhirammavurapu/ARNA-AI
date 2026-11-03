@@ -59,7 +59,7 @@ export default function SettingsModal({ open, onClose, tts, chatCount, onClearAl
             <input value={settings.name} onChange={(e) => update({ name: e.target.value.slice(0, 40) })} placeholder="e.g. Abhi" className={field} />
           </Row>
 
-          <Row label="Voice input language" hint="Choose Telugu when speaking Telugu. Browser speech recognition cannot reliably auto-detect mixed languages. ARNA detects Telugu text and speaks Telugu replies automatically.">
+          <Row label="Voice input language" hint="Select the language you are speaking. Switch between English and Telugu here when you change languages; the browser microphone cannot reliably auto-detect speech language.">
             <select value={settings.lang} onChange={(e) => update({ lang: e.target.value, voiceName: '' })} className={field}>
               <option value="te-IN">తెలుగు (Telugu)</option>
               <option value="en-IN">English (India)</option>

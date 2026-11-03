@@ -114,22 +114,22 @@ test('system prompt explicitly requires the detected reply language', () => {
   );
 });
 
-test('voice replies follow the recognized message language, not the input setting', () => {
+test('voice replies follow the selected speech recognition language', () => {
   assert.match(
     buildSystemPrompt({
       voice: true,
       lang: 'te-IN',
-      latestMessage: 'I am doing well, thank you.',
+      latestMessage: 'How are you?',
     }),
-    /REQUIRED RESPONSE LANGUAGE: English/
+    /REQUIRED RESPONSE LANGUAGE: Telugu/
   );
   assert.match(
     buildSystemPrompt({
       voice: true,
       lang: 'en-IN',
-      latestMessage: 'నేను బాగున్నాను, ధన్యవాదాలు.',
+      latestMessage: 'నువ్వు ఎలా ఉన్నావు?',
     }),
-    /REQUIRED RESPONSE LANGUAGE: Telugu/
+    /REQUIRED RESPONSE LANGUAGE: English/
   );
   assert.match(
     buildSystemPrompt({
