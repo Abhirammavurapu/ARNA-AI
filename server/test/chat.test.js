@@ -141,6 +141,25 @@ test('voice replies follow the selected speech recognition language', () => {
   );
 });
 
+test('auto voice replies follow the recognized transcript language', () => {
+  assert.match(
+    buildSystemPrompt({
+      voice: true,
+      lang: 'auto',
+      latestMessage: 'Nuvvu ela unnav?',
+    }),
+    /REQUIRED RESPONSE LANGUAGE: Telugu/
+  );
+  assert.match(
+    buildSystemPrompt({
+      voice: true,
+      lang: 'auto',
+      latestMessage: 'How are you?',
+    }),
+    /REQUIRED RESPONSE LANGUAGE: English/
+  );
+});
+
 async function collect(res) {
   const text = await res.text();
   return text

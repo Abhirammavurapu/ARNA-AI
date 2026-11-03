@@ -12,7 +12,9 @@ const ERRORS = {
 
 /**
  * Speech-to-text from the microphone. A fresh recognizer is created for every session,
- * which is the most reliable approach on Android Chrome and Safari.
+ * which is the most reliable approach on Android Chrome and Safari. Browsers require a
+ * recognition locale, so auto mode uses the browser's locale and lets the server detect
+ * the reply language from the resulting transcript.
  */
 export function useRecognition({ lang, onInterim, onEnd }) {
   const [listening, setListening] = useState(false);
@@ -36,7 +38,10 @@ export function useRecognition({ lang, onInterim, onEnd }) {
     if (recRef.current) return true;
     setError('');
     const rec = new SR();
-    rec.lang = cb.current.lang;
+    rec.lang =
+      cb.current.lang === 'auto'
+        ? (typeof navigator !== 'undefined' && navigator.language) || 'en-IN'
+        : cb.current.lang;
     rec.interimResults = true;
     rec.continuous = false;
     rec.maxAlternatives = 1;

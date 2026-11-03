@@ -30,12 +30,13 @@ export default function SettingsModal({ open, onClose, tts, chatCount, onClearAl
 
   if (!open) return null;
 
-  const options = voicesForLang(tts.voices, settings.lang);
+  const voiceLang = settings.lang === 'auto' ? 'en-IN' : settings.lang;
+  const options = voicesForLang(tts.voices, voiceLang);
 
   const preview = () => {
     tts.cancel();
     tts.unlock();
-    tts.speak(settings.lang === 'te-IN' ? 'నమస్కారం! నేను ARNA. మీకు ఎలా సహాయం చేయగలను?' : `Hi${settings.name ? ` ${settings.name}` : ''}, I'm Arna. This is how I sound.`, { lang: settings.lang });
+    tts.speak(voiceLang === 'te-IN' ? 'నమస్కారం! నేను ARNA. మీకు ఎలా సహాయం చేయగలను?' : `Hi${settings.name ? ` ${settings.name}` : ''}, I'm Arna. This is how I sound.`, { lang: voiceLang });
   };
 
   return (
@@ -59,14 +60,54 @@ export default function SettingsModal({ open, onClose, tts, chatCount, onClearAl
             <input value={settings.name} onChange={(e) => update({ name: e.target.value.slice(0, 40) })} placeholder="e.g. Abhi" className={field} />
           </Row>
 
-          <Row label="Voice input language" hint="Select the language you are speaking. Switch between English and Telugu here when you change languages; the browser microphone cannot reliably auto-detect speech language.">
-            <select value={settings.lang} onChange={(e) => update({ lang: e.target.value, voiceName: '' })} className={field}>
-              <option value="te-IN">తెలుగు (Telugu)</option>
-              <option value="en-IN">English (India)</option>
-              {LANGUAGES.filter((l) => !['te-IN', 'en-IN'].includes(l.code)).map((l) => (
-                <option key={l.code} value={l.code}>{l.label}</option>
-              ))}
-            </select>
+          <Row
+            label="Voice input language"
+            hint="Auto follows the language in the recognized transcript. Browser speech recognition still uses your browser's language; choose a specific language below if it transcribes your speech incorrectly."
+          >
+            <div className="space-y-3 rounded-2xl border border-line bg-surface/70 p-3">
+              <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${settings.lang === 'auto' ? 'border-violet-400/60 bg-violet-500/10' : 'border-line hover:bg-surface2'}`}>
+                <input
+                  type="radio"
+                  name="voice-input-language"
+                  value="auto"
+                  checked={settings.lang === 'auto'}
+                  onChange={() => update({ lang: 'auto', voiceName: '' })}
+                  className="mt-0.5 h-4 w-4 accent-violet-500"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium">Auto (recommended)</span>
+                  <span className="mt-0.5 block text-xs text-muted">Reply in the language ARNA recognizes</span>
+                </span>
+              </label>
+
+              <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${settings.lang !== 'auto' ? 'border-violet-400/60 bg-violet-500/10' : 'border-line hover:bg-surface2'}`}>
+                <input
+                  type="radio"
+                  name="voice-input-language"
+                  value="manual"
+                  checked={settings.lang !== 'auto'}
+                  onChange={() => update({ lang: 'en-IN', voiceName: '' })}
+                  className="mt-0.5 h-4 w-4 accent-violet-500"
+                />
+                <span className="block text-sm font-medium">Choose a recognition language</span>
+              </label>
+
+              {settings.lang !== 'auto' && (
+                <div className="ml-7 border-l-2 border-violet-400/30 pl-3">
+                  <label htmlFor="voice-recognition-language" className="mb-1.5 block text-xs font-medium text-muted">Speech recognition language</label>
+                  <select
+                    id="voice-recognition-language"
+                    value={settings.lang}
+                    onChange={(e) => update({ lang: e.target.value, voiceName: '' })}
+                    className={field}
+                  >
+                    {LANGUAGES.map((l) => (
+                      <option key={l.code} value={l.code}>{l.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
           </Row>
 
           <Row

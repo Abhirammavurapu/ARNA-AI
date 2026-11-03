@@ -45,7 +45,7 @@ export function detectLanguageStyle(text = '') {
 
 export function buildSystemPrompt({
   voice = false,
-  lang = 'en-US',
+  lang = 'auto',
   name = '',
   mode = 'friendly',
   messages = [],
@@ -60,7 +60,7 @@ export function buildSystemPrompt({
       ?.content ||
     '';
 
-  const voiceLanguage = voice
+  const voiceLanguage = voice && lang !== 'auto'
     ? String(lang).toLowerCase().split('-')[0]
     : '';
   let language = detectLanguageStyle(currentMessage);

@@ -111,7 +111,7 @@ export function parseChatBody(body) {
     lang:
       typeof body.lang === 'string'
         ? body.lang.slice(0, 12)
-        : 'en-US',
+        : 'auto',
     name:
       typeof body.name === 'string'
         ? body.name.trim().slice(0, 40)

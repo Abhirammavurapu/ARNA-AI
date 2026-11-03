@@ -1,11 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-const KEY = 'arna.settings.v1';
+const KEY = 'arna.settings.v2';
+const LEGACY_KEY = 'arna.settings.v1';
 
 const defaults = {
   name: '',
   theme: 'dark',
-  lang: 'te-IN',
+  lang: 'auto',
   voiceName: '',
   rate: 1,
   autoSpeak: false,
@@ -13,7 +14,11 @@ const defaults = {
 
 function load() {
   try {
-    return { ...defaults, ...JSON.parse(localStorage.getItem(KEY) || '{}') };
+    const saved = localStorage.getItem(KEY);
+    if (saved) return { ...defaults, ...JSON.parse(saved) };
+
+    const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || '{}');
+    return { ...defaults, ...legacy, lang: 'auto' };
   } catch {
     return defaults;
   }
