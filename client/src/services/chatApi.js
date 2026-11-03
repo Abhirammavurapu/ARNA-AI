@@ -1,5 +1,13 @@
 const configuredApiUrl = import.meta.env.VITE_API_URL?.trim().replace(/\/$/, '');
-export const API_BASE = import.meta.env.DEV ? configuredApiUrl || '' : '';
+const isRenderFrontend =
+  typeof window !== 'undefined' &&
+  window.location.hostname.endsWith('.onrender.com') &&
+  window.location.hostname !== 'arna-ai-21.onrender.com';
+export const API_BASE = import.meta.env.DEV
+  ? configuredApiUrl || ''
+  : isRenderFrontend
+    ? 'https://arna-ai-21.onrender.com'
+    : '';
 
 export class ApiError extends Error {
   constructor(message, code = 'ERROR') {

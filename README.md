@@ -23,8 +23,10 @@ npm run dev
 Open the Vite URL printed in your terminal (often http://localhost:5173). The microphone needs **HTTPS** (or localhost), so test voice on a phone using a deployed HTTPS URL. Open Settings and select Telugu (te-IN) when speaking Telugu; browser speech recognition does not reliably auto-detect mixed Telugu and English.
 
 ## Deploy
-- **Backend (Render)**: root `server`, start `npm start`; env: AI key, `CLIENT_URL=https://your-app.vercel.app`
-- **Frontend (Vercel)**: root `client`, build `npm run build`; `client/vercel.json` proxies `/api/*` to Render so session cookies stay same-origin. For local development, set `VITE_API_URL` if the server is not on `localhost:5000`.
+- **Backend (Render)**: root `server`, start `npm start`; set the AI key and `CLIENT_URL` to the exact deployed frontend origin.
+- **Frontend (Vercel)**: root `client`, build `npm run build`; `client/vercel.json` proxies `/api/*` to Render so session cookies stay same-origin.
+- **Frontend (Render)**: root `client`, build `npm run build`; Render-hosted frontends call `https://arna-ai-21.onrender.com` directly. Set the backend's `CLIENT_URL` to the frontend's `https://<frontend-service>.onrender.com` origin.
+- **Local development**: set `VITE_API_URL` if the server is not on `localhost:5000`.
 
 ## Why the 3D orb stays smooth on phones
 Lazy-loaded 3D code with an instant CSS orb meanwhile; pixel ratio capped at 1.5 on touch; fewer polygons/particles on phones; automatic quality drop (then CSS fallback) if frames are slow; rendering pauses when off-screen or the tab is hidden; the canvas never captures touch, so scrolling is never blocked; falls back on WebGL loss or reduced-motion.
