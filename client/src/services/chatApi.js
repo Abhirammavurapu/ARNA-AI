@@ -1,4 +1,11 @@
-const API_BASE = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/$/, '') : '';
+const DEFAULT_PRODUCTION_API_URL = 'https://arna-ai-21.onrender.com';
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim().replace(/\/$/, '');
+const localApiUrl = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configuredApiUrl || '');
+const API_BASE = import.meta.env.DEV
+  ? configuredApiUrl || ''
+  : configuredApiUrl && !localApiUrl
+    ? configuredApiUrl
+    : DEFAULT_PRODUCTION_API_URL;
 
 export class ApiError extends Error {
   constructor(message, code = 'ERROR') {

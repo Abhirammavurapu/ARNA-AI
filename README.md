@@ -24,7 +24,7 @@ Open the Vite URL printed in your terminal (often http://localhost:5173). The mi
 
 ## Deploy
 - **Backend (Render)**: root `server`, start `npm start`; env: AI key, `CLIENT_URL=https://your-app.vercel.app`
-- **Frontend (Vercel)**: root `client`, build `npm run build`; env: `VITE_API_URL=https://your-api.onrender.com`
+- **Frontend (Vercel)**: root `client`, build `npm run build`; API defaults to `https://arna-ai-21.onrender.com` in production. Set `VITE_API_URL` to override it.
 
 ## Why the 3D orb stays smooth on phones
 Lazy-loaded 3D code with an instant CSS orb meanwhile; pixel ratio capped at 1.5 on touch; fewer polygons/particles on phones; automatic quality drop (then CSS fallback) if frames are slow; rendering pauses when off-screen or the tab is hidden; the canvas never captures touch, so scrolling is never blocked; falls back on WebGL loss or reduced-motion.
