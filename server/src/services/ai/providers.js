@@ -14,7 +14,7 @@ function geminiGenerationConfig(model) {
   if (/^gemini-2\.5-flash(?:-|$)/i.test(model)) {
     config.thinkingConfig = { thinkingBudget: 0 };
   } else if (/^gemini-3(?:\.|-\d)/i.test(model)) {
-    config.thinkingConfig = { thinkingLevel: 'minimal' };
+    config.thinkingConfig = { thinkingLevel: 'LOW' };
   }
 
   return config;
