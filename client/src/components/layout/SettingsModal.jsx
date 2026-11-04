@@ -67,7 +67,7 @@ export default function SettingsModal({ open, onClose, tts, chatCount, onClearAl
 
           <Row
             label="Voice input language"
-            hint="This selects the microphone's recognition language, not ARNA's reply language. Auto uses Telugu recognition when your device is set to India or Telugu; otherwise choose Telugu under “I am speaking” if Telugu is misrecognized. ARNA still replies in English when it recognizes an English question."
+            hint="This selects the microphone's recognition language, not ARNA's reply language. Auto uses your browser's language. If you speak Telugu, choose Telugu under “I am speaking”; switch back to your English language for English speech so the microphone transcribes it correctly."
           >
             <div className="overflow-hidden rounded-2xl border border-violet-400/20 bg-gradient-to-br from-violet-500/10 via-surface/80 to-cyan-400/10 p-3 shadow-inner shadow-violet-500/5">
               <div className="mb-3 flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-wider text-violet-300">
@@ -86,7 +86,7 @@ export default function SettingsModal({ open, onClose, tts, chatCount, onClearAl
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-violet-400/15 text-violet-300"><Sparkles size={16} /></span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2 text-sm font-semibold">Auto <span className="rounded-full bg-cyan-300/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cyan-200">Default</span></span>
-                    <span className="mt-1 block text-xs leading-relaxed text-muted">Uses Telugu recognition on India/Telugu devices; otherwise uses your browser language.</span>
+                    <span className="mt-1 block text-xs leading-relaxed text-muted">Uses your browser language. Choose Telugu below when speaking Telugu if Auto mishears it.</span>
                   </span>
                 </label>
 

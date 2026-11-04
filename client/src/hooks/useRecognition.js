@@ -12,19 +12,7 @@ const ERRORS = {
 
 function recognitionLanguage(setting) {
   if (setting !== 'auto') return setting;
-
-  const locales = typeof navigator !== 'undefined'
-    ? navigator.languages?.length
-      ? navigator.languages
-      : [navigator.language]
-    : [];
-  const indianLocale = locales.find((locale) => /-(in|te)(-|$)/i.test(locale));
-  const isIndiaTimezone = typeof Intl !== 'undefined'
-    && Intl.DateTimeFormat().resolvedOptions().timeZone === 'Asia/Kolkata';
-
-  if (indianLocale && /^hi-/i.test(indianLocale)) return 'hi-IN';
-  if (locales.some((locale) => /^te-/i.test(locale)) || indianLocale || isIndiaTimezone) return 'te-IN';
-  return locales[0] || 'en-IN';
+  return (typeof navigator !== 'undefined' && navigator.language) || 'en-IN';
 }
 
 /**
