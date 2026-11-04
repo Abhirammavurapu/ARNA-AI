@@ -1,5 +1,5 @@
 
-export function detectLanguageStyle(text = '') {
+export function detectLanguageStyle(text = '', fallbackLang = 'auto') {
   const message = String(text).trim();
 
   if (/[\u0C00-\u0C7F]/.test(message)) {
@@ -10,9 +10,6 @@ export function detectLanguageStyle(text = '') {
   }
 
   const words = message.toLowerCase().match(/[a-z]+/g) || [];
-  if (words.length === 0) {
-    return 'ENGLISH';
-  }
 
   const hindiWords = new Set([
     'aap', 'aapko', 'achha', 'acha', 'batao', 'bataiye',
@@ -29,40 +26,67 @@ export function detectLanguageStyle(text = '') {
     return 'HINDI';
   }
 
+  const englishWords = new Set([
+    'i', 'you', 'we', 'they', 'he', 'she', 'it', 'the', 'is',
+    'are', 'am', 'was', 'were', 'do', 'does', 'did', 'can',
+    'could', 'would', 'should', 'will', 'what', 'when', 'where',
+    'who', 'why', 'how', 'please', 'tell', 'explain', 'show',
+    'give', 'help', 'want', 'need', 'know', 'like', 'today',
+    'weather', 'time', 'name', 'hello', 'hi', 'thanks', 'thank',
+    'good', 'morning', 'about', 'not', 'this', 'that', 'my',
+    'your', 'me', 'and', 'or', 'to', 'of', 'in', 'on', 'for',
+    'with', 'from', 'have', 'has', 'had', 'make', 'let', 'teach',
+    'learn', 'write', 'speak', 'talk', 'question', 'answer',
+  ]);
+  const isClearlyEnglish = words.some((word) => englishWords.has(word));
+
   const teluguWords = new Set([
     'nenu', 'naaku', 'naku', 'naa', 'naatho', 'natho',
-    'neeku', 'neku', 'meeku', 'miku', 'nuvvu',
+    'neeku', 'neku', 'meeku', 'miku', 'mee', 'nuvvu',
     'nuv', 'meeru', 'memu', 'manam', 'mana', 'maa',
-    'ela', 'yela', 'unnava', 'unnavu', 'unnav', 'unnaru',
+    'ela', 'elaa', 'yela', 'yelaa', 'unnava', 'unnavu', 'unnav', 'unnaru',
     'vunnava', 'vunnavu', 'vunnav', 'vunnaru',
-    'untava', 'untaru', 'enti', 'emiti', 'enduku', 'evaru',
-    'evvaru', 'ekkada', 'eppudu', 'em', 'emi', 'cheppu',
-    'cheppandi', 'cheppava', 'cheppali', 'cheptava', 'cheptanu', 'chey',
-    'cheyyi', 'cheyyandi', 'chesava', 'chesanu', 'chesaru',
-    'chestunnav', 'chesthunav', 'chestunnaru', 'chesthunaru',
+    'untava', 'untaru', 'enti', 'emiti', 'enduku', 'endhuku', 'evaru',
+    'evvaru', 'ekkada', 'eppudu', 'em', 'emi', 'yenti', 'cheppu',
+    'cheppandi', 'cheppava', 'cheppali', 'cheptava', 'cheptanu', 'cheppanu',
+    'chey', 'cheyyi', 'cheyyandi', 'cheyyali', 'chesava', 'chesanu', 'chesaru',
+    'chesa', 'chestunnav', 'chesthunav', 'chestunnaru', 'chesthunaru',
+    'matladutunnanu', 'maatladutunnanu', 'matladandi',
     'kavali', 'kaavali', 'kavala', 'ledu', 'leduga', 'undi',
-    'undhi', 'unnadi', 'unna', 'nerpinchu', 'nerchuko',
-    'nerchukovali', 'telusu', 'teliyadu', 'telidu', 'kuda',
-    'kauda', 'kaani', 'kani', 'chala', 'chaala', 'konchem',
+    'undhi', 'unnadi', 'unna', 'bagundi', 'baagundi', 'bagundhi',
+    'nerpinchu', 'nerchuko', 'nerchukovali', 'telusu', 'telsu',
+    'teliyadu', 'telidu', 'kuda', 'kauda', 'kaani', 'kani',
+    'chala', 'chaala', 'konchem', 'gurinchi', 'gurunchi', 'nunchi',
     'ippudu', 'ivala', 'eeroju', 'repu', 'ninna', 'bagunnava',
     'baagunnava', 'bagunnanu', 'baagunnanu', 'vachava',
     'vachanu', 'vastava', 'vastanu', 'vellava', 'vellanu',
     'vellali', 'avunu', 'kaadu', 'kadu', 'sare', 'aithe',
-    'kosam', 'nunchi', 'ivvu',
-    'ivvandi', 'chudu', 'chudali', 'chustunna', 'randi',
+    'kosam', 'ivvu', 'ivvandi', 'andi', 'ayya',
+    'chudu', 'chudali', 'chustunna', 'randi',
     'akka', 'nanna', 'inka', 'tinu', 'tinava', 'tinanu',
     'chesuko', 'chesukondi', 'avtundi', 'avutundi',
     'pettu', 'pettandi', 'raayi', 'chadhuvu', 'matladu',
     'matladandi', 'sahayam'
   ]);
 
-  return words.some(word => teluguWords.has(word))
-    ? 'TELUGU'
-    : 'ENGLISH';
+  if (words.some((word) => teluguWords.has(word))) {
+    return 'TELUGU';
+  }
+  if (isClearlyEnglish) {
+    return 'ENGLISH';
+  }
+  if (fallbackLang.toLowerCase().startsWith('te')) {
+    return 'TELUGU';
+  }
+  if (fallbackLang.toLowerCase().startsWith('hi')) {
+    return 'HINDI';
+  }
+  return 'ENGLISH';
 }
 
 export function buildSystemPrompt({
   voice = false,
+  lang = 'auto',
   name = '',
   mode = 'friendly',
   messages = [],
@@ -77,7 +101,7 @@ export function buildSystemPrompt({
       ?.content ||
     '';
 
-  const language = detectLanguageStyle(currentMessage);
+  const language = detectLanguageStyle(currentMessage, voice ? lang : 'auto');
   const languageName = {
     ENGLISH: 'English',
     HINDI: 'Hindi',

@@ -49,7 +49,7 @@ export default function App() {
 
   // --- sending (with optional spoken reply) --------------------------------
   const handleSend = useCallback(
-    (text, images = [], { fromVoice = false, mode = assistantMode } = {}) => {
+    (text, images = [], { fromVoice = false, mode = assistantMode, lang: voiceLang } = {}) => {
       const speak = fromVoice || settings.autoSpeak;
       let splitter;
       if (speak && tts.supported) {
@@ -60,7 +60,7 @@ export default function App() {
       }
       return send(text, images, {
         voice: fromVoice,
-        lang: settings.lang,
+        lang: voiceLang || settings.lang,
         name: settings.name,
         mode,
         onDelta: (d) => splitter?.push(d),

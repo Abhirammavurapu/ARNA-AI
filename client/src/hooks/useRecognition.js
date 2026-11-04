@@ -10,6 +10,23 @@ const ERRORS = {
   'language-not-supported': 'This language is not supported for voice input on your device.',
 };
 
+function recognitionLanguage(setting) {
+  if (setting !== 'auto') return setting;
+
+  const locales = typeof navigator !== 'undefined'
+    ? navigator.languages?.length
+      ? navigator.languages
+      : [navigator.language]
+    : [];
+  const indianLocale = locales.find((locale) => /-(in|te)(-|$)/i.test(locale));
+  const isIndiaTimezone = typeof Intl !== 'undefined'
+    && Intl.DateTimeFormat().resolvedOptions().timeZone === 'Asia/Kolkata';
+
+  if (indianLocale && /^hi-/i.test(indianLocale)) return 'hi-IN';
+  if (locales.some((locale) => /^te-/i.test(locale)) || indianLocale || isIndiaTimezone) return 'te-IN';
+  return locales[0] || 'en-IN';
+}
+
 /**
  * Speech-to-text from the microphone. A fresh recognizer is created for every session,
  * which is the most reliable approach on Android Chrome and Safari. Browsers require a
@@ -38,10 +55,8 @@ export function useRecognition({ lang, onInterim, onEnd }) {
     if (recRef.current) return true;
     setError('');
     const rec = new SR();
-    rec.lang =
-      cb.current.lang === 'auto'
-        ? (typeof navigator !== 'undefined' && navigator.language) || 'en-IN'
-        : cb.current.lang;
+    const activeLang = recognitionLanguage(cb.current.lang);
+    rec.lang = activeLang;
     rec.interimResults = true;
     rec.continuous = false;
     rec.maxAlternatives = 1;
@@ -65,7 +80,7 @@ export function useRecognition({ lang, onInterim, onEnd }) {
     rec.onend = () => {
       recRef.current = null;
       setListening(false);
-      cb.current.onEnd?.(finalText.trim(), { failed });
+      cb.current.onEnd?.(finalText.trim(), { failed, lang: activeLang });
     };
     try {
       rec.start();

@@ -33,7 +33,7 @@ export default function LiveVoice({ onClose, chat, tts, lang, name }) {
     setPhase(rec.start() ? 'listening' : 'paused');
   }
 
-  function handleEnd(text, { failed }) {
+  function handleEnd(text, { failed, lang: recognitionLang } = {}) {
     if (!alive.current) return;
     if (failed) return setPhase('paused');
     if (!text) {
@@ -42,10 +42,10 @@ export default function LiveVoice({ onClose, chat, tts, lang, name }) {
       return empties.current >= 3 ? setPhase('paused') : listen();
     }
     empties.current = 0;
-    respond(text);
+    respond(text, recognitionLang);
   }
 
-  function respond(text) {
+  function respond(text, recognitionLang) {
     setPhase('thinking');
     setHeard(text);
     setCaption('');
@@ -62,7 +62,7 @@ export default function LiveVoice({ onClose, chat, tts, lang, name }) {
     });
     chat.send(text, [], {
       voice: true,
-      lang,
+      lang: recognitionLang || lang,
       name,
       onDelta: (d) => {
         full += d;

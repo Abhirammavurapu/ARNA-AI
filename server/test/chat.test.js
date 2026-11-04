@@ -88,6 +88,11 @@ test('detects Telugu script and common Roman Telugu while preserving English', (
     'naku coding nerpinchu',
     'Naaku oka doubt undhi, help cheyyi',
     'Hi, naaku Java nerpinchu',
+    'Nenu Telugu lo matladutunnanu, naaku Java nerpinchu',
+    'Meeru ela unnaru?',
+    'Naaku idi chala bagundi',
+    'Naaku weather gurinchi cheppandi',
+    'Nenu ippudu Telugu lo matladutunnanu',
     'నాకు Python నేర్పించు',
   ]) {
     assert.equal(detectLanguageStyle(message), 'TELUGU', message);
@@ -98,6 +103,7 @@ test('detects Telugu script and common Roman Telugu while preserving English', (
     'Can you teach me Java?',
     'What is Telugu grammar?',
     'Can you show me how to learn Python?',
+    'I want to learn Telugu grammar in English.',
   ]) {
     assert.equal(detectLanguageStyle(message), 'ENGLISH', message);
   }
@@ -151,6 +157,22 @@ test('voice reply language follows transcript rather than recognition setting', 
       latestMessage: 'నువ్వు ఎలా ఉన్నావు?',
     }),
     /REQUIRED RESPONSE LANGUAGE: Telugu/
+  );
+  assert.match(
+    buildSystemPrompt({
+      voice: true,
+      lang: 'te-IN',
+      latestMessage: 'Poyyi daggara unnanu',
+    }),
+    /REQUIRED RESPONSE LANGUAGE: Telugu/
+  );
+  assert.match(
+    buildSystemPrompt({
+      voice: true,
+      lang: 'te-IN',
+      latestMessage: 'What is the weather today?',
+    }),
+    /REQUIRED RESPONSE LANGUAGE: English/
   );
   assert.match(
     buildSystemPrompt({

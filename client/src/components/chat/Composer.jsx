@@ -20,12 +20,12 @@ export default function Composer({ busy, lang, onSend, onStop, onGesture, onOpen
   const rec = useRecognition({
     lang,
     onInterim: setInterim,
-    onEnd: (finalText) => {
+    onEnd: (finalText, { lang: recognitionLang } = {}) => {
       setInterim('');
       if (!finalText) return;
       const { text: typed, images: imgs } = draft.current;
       // Talking to ARNA sends straight away and the reply is spoken back.
-      onSend(`${typed} ${finalText}`.trim(), imgs, { fromVoice: true });
+      onSend(`${typed} ${finalText}`.trim(), imgs, { fromVoice: true, lang: recognitionLang });
       setText('');
       setImages([]);
     },

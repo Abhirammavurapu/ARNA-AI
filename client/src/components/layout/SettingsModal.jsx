@@ -51,7 +51,7 @@ export default function SettingsModal({ open, onClose, tts, chatCount, onClearAl
         aria-modal="true"
         aria-label="Settings"
         onClick={(e) => e.stopPropagation()}
-        className="scroll-y max-h-[92dvh] w-full max-w-md rounded-t-3xl border border-line bg-side p-5 shadow-2xl sm:rounded-3xl"
+        className="scroll-y max-h-[92dvh] min-w-0 w-full max-w-md overflow-x-hidden rounded-t-3xl border border-line bg-side p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-3xl sm:p-5"
       >
         <div className="mb-1 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Settings</h2>
@@ -67,7 +67,7 @@ export default function SettingsModal({ open, onClose, tts, chatCount, onClearAl
 
           <Row
             label="Voice input language"
-            hint="This selects the microphone's recognition language, not ARNA's reply language. Set it to Hindi for Hindi speech or Telugu for Telugu speech. Auto uses your browser's language and cannot reliably switch languages mid-session."
+            hint="This selects the microphone's recognition language, not ARNA's reply language. Auto uses Telugu recognition when your device is set to India or Telugu; otherwise choose Telugu under “I am speaking” if Telugu is misrecognized. ARNA still replies in English when it recognizes an English question."
           >
             <div className="overflow-hidden rounded-2xl border border-violet-400/20 bg-gradient-to-br from-violet-500/10 via-surface/80 to-cyan-400/10 p-3 shadow-inner shadow-violet-500/5">
               <div className="mb-3 flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-wider text-violet-300">
@@ -86,11 +86,11 @@ export default function SettingsModal({ open, onClose, tts, chatCount, onClearAl
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-violet-400/15 text-violet-300"><Sparkles size={16} /></span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2 text-sm font-semibold">Auto <span className="rounded-full bg-cyan-300/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cyan-200">Default</span></span>
-                    <span className="mt-1 block text-xs leading-relaxed text-muted">Uses your browser's recognition language; reply follows the transcript.</span>
+                    <span className="mt-1 block text-xs leading-relaxed text-muted">Uses Telugu recognition on India/Telugu devices; otherwise uses your browser language.</span>
                   </span>
                 </label>
 
-                <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition ${settings.lang !== 'auto' ? 'border-cyan-300/50 bg-cyan-400/10 shadow-md shadow-cyan-950/20' : 'border-line/70 bg-black/5 hover:border-violet-300/40 hover:bg-violet-400/5'}`}>
+                <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition sm:p-3.5 ${settings.lang !== 'auto' ? 'border-cyan-300/50 bg-cyan-400/10 shadow-md shadow-cyan-950/20' : 'border-line/70 bg-black/5 hover:border-violet-300/40 hover:bg-violet-400/5'}`}>
                   <input
                     type="radio"
                     name="voice-input-language"
@@ -99,7 +99,7 @@ export default function SettingsModal({ open, onClose, tts, chatCount, onClearAl
                     onChange={() => update({ lang: 'hi-IN', voiceName: '' })}
                     className="mt-0.5 h-4 w-4 accent-cyan-400"
                   />
-                  <span className="block text-sm font-semibold">Choose a language <span className="mt-1 block text-xs font-normal text-muted">Choose Hindi or Telugu to improve recognition accuracy.</span></span>
+                  <span className="block min-w-0 flex-1 text-sm font-semibold">Choose a language <span className="mt-1 block text-xs font-normal text-muted">Choose Hindi or Telugu to improve recognition accuracy.</span></span>
                 </label>
               </div>
 
