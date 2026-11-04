@@ -20,6 +20,7 @@ function ensureReady() {
 function issueSession(user, res) {
   const token = jwt.sign({ sub: user._id.toString() }, process.env.JWT_SECRET, { expiresIn: '7d', issuer: 'arna-ai' });
   res.cookie(COOKIE, token, cookieOptions());
+  return token;
 }
 
 export async function register(req, res, next) {
@@ -34,8 +35,8 @@ export async function register(req, res, next) {
     if (await User.exists({ email })) throw new AppError('An account with this email already exists.', 409, 'EMAIL_EXISTS');
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await User.create({ name, email, passwordHash });
-    issueSession(user, res);
-    res.status(201).json({ success: true, user: publicUser(user) });
+    const token = issueSession(user, res);
+    res.status(201).json({ success: true, user: publicUser(user), token });
   } catch (err) { next(err); }
 }
 
@@ -46,8 +47,8 @@ export async function login(req, res, next) {
     const password = String(req.body?.password || '');
     const user = await User.findOne({ email }).select('+passwordHash');
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) throw new AppError('Email or password is incorrect.', 401, 'INVALID_CREDENTIALS');
-    issueSession(user, res);
-    res.json({ success: true, user: publicUser(user) });
+    const token = issueSession(user, res);
+    res.json({ success: true, user: publicUser(user), token });
   } catch (err) { next(err); }
 }
 

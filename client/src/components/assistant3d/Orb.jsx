@@ -13,7 +13,9 @@ const OrbCanvas = lazy(() => import('./OrbCanvas.jsx'));
 export default function Orb({ state = 'idle', className = '' }) {
   const wrapRef = useRef(null);
   const touch = useRef(isTouchDevice()).current;
-  const [mode, setMode] = useState(() => (hasWebGL() && !prefersReducedMotion() ? 'webgl' : 'css'));
+  const [mode, setMode] = useState(() =>
+    !isLowPowerDevice() && hasWebGL() && !prefersReducedMotion() ? 'webgl' : 'css'
+  );
   const [ready, setReady] = useState(false);
   const [quality, setQuality] = useState(() => (isLowPowerDevice() ? 1 : 0));
   const [onScreen, setOnScreen] = useState(true);

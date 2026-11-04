@@ -72,12 +72,13 @@ after(() => {
   api.close();
 });
 
-const post = (body) =>
+const post = (body, headers = {}) =>
   fetch(`http://127.0.0.1:${apiPort}/api/chat`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Cookie: `arna_session=${session}`,
+      ...headers,
     },
     body: JSON.stringify(body),
   });
@@ -251,6 +252,16 @@ for (const provider of ['gemini', 'groq', 'anthropic', 'openai']) {
   });
 }
 
+test('chat accepts a bearer session when cross-site cookies are unavailable', async () => {
+  env.ai.provider = 'gemini';
+  const res = await post(
+    { messages: [{ role: 'user', content: 'hi' }] },
+    { Cookie: '', Authorization: `Bearer ${session}` }
+  );
+  assert.equal(res.status, 200);
+  assert.equal((await collect(res)).at(-1).type, 'done');
+});
+
 test('voice flag and name reach the system prompt', async () => {
   env.ai.provider = 'gemini';
   seen.length = 0;
@@ -381,4 +392,17 @@ test('backend root explains that this is an API and links status', async () => {
 test('disallowed origin gets 403', async () => {
   const res = await fetch(`http://127.0.0.1:${apiPort}/api/status`, { headers: { Origin: 'http://evil.example' } });
   assert.equal(res.status, 403);
+});
+
+test('CORS allows the bearer authorization header from the frontend', async () => {
+  const res = await fetch(`http://127.0.0.1:${apiPort}/api/chat`, {
+    method: 'OPTIONS',
+    headers: {
+      Origin: 'http://localhost:5173',
+      'Access-Control-Request-Method': 'POST',
+      'Access-Control-Request-Headers': 'authorization,content-type',
+    },
+  });
+  assert.equal(res.status, 204);
+  assert.match(res.headers.get('access-control-allow-headers'), /authorization/i);
 });

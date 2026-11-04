@@ -18,7 +18,7 @@ export function hasWebGL() {
 
 /** Rough "this phone is weak" check used to start the 3D orb at lower quality. */
 export function isLowPowerDevice() {
-  const mem = navigator.deviceMemory;
-  const cores = navigator.hardwareConcurrency;
+  const mem = typeof navigator !== 'undefined' ? navigator.deviceMemory : undefined;
+  const cores = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency : undefined;
   return (mem && mem <= 2) || (cores && cores <= 4) || false;
 }

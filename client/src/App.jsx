@@ -45,7 +45,7 @@ export default function App() {
   }, [chat.activeId, chat.active?.mode]);
 
   const messages = chat.active?.messages ?? NO_MESSAGES;
-  const lastIsStreaming = messages.at(-1)?.streaming;
+  const lastIsStreaming = messages[messages.length - 1]?.streaming;
 
   // --- sending (with optional spoken reply) --------------------------------
   const handleSend = useCallback(

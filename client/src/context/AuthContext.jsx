@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { getCurrentUser, loginUser, logoutUser, registerUser } from '../services/authApi.js';
 import { AUTH_REQUIRED_EVENT } from '../services/chatApi.js';
+import { clearSessionToken } from '../services/sessionToken.js';
 
 const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
@@ -12,7 +13,10 @@ export function AuthProvider({ children }) {
     return () => { live = false; };
   }, []);
   useEffect(() => {
-    const handleAuthRequired = () => setUser(null);
+    const handleAuthRequired = () => {
+      clearSessionToken();
+      setUser(null);
+    };
     window.addEventListener(AUTH_REQUIRED_EVENT, handleAuthRequired);
     return () => window.removeEventListener(AUTH_REQUIRED_EVENT, handleAuthRequired);
   }, []);

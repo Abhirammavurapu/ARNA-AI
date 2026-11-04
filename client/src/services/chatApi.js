@@ -1,3 +1,5 @@
+import { getSessionToken } from './sessionToken.js';
+
 const configuredApiUrl = import.meta.env.VITE_API_URL?.trim().replace(/\/$/, '');
 const isRenderFrontend =
   typeof window !== 'undefined' &&
@@ -29,10 +31,14 @@ export async function getStatus(signal) {
  */
 export async function streamChat({ messages, voice, lang, name, mode, signal, onDelta }) {
   let res;
+  const token = getSessionToken();
   try {
     res = await fetch(`${API_BASE}/api/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       credentials: 'include',
       body: JSON.stringify({ messages, voice, lang, name, mode }),
       signal,
