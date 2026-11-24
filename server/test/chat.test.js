@@ -134,6 +134,15 @@ test('system prompt explicitly requires the detected reply language', () => {
   );
 });
 
+test('system prompt identifies Abhi as ARNA creator', () => {
+  const prompt = buildSystemPrompt({
+    latestMessage: 'Who created you?',
+  });
+
+  assert.match(prompt, /ARNA was created by Abhi/);
+  assert.match(prompt, /I was created by Abhi/);
+});
+
 test('voice reply language follows transcript rather than recognition setting', () => {
   assert.match(
     buildSystemPrompt({
